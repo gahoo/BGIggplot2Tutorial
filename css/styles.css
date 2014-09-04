@@ -1,0 +1,19 @@
+aside.gdbar img {
+position: absolute;
+width: 164px;
+height: 38px;
+right: 0;
+margin: 30px 15px;
+}
+
+slides > slide:not(.nobackground):before {
+    background: url("img/logo.png") no-repeat scroll 0 50% / 30px 30px rgba(0, 0, 0, 0);
+    bottom: 20px;
+    content: "";
+    font-size: 12pt;
+    height: 30px;
+    left: 60px;
+    line-height: 1.9;
+    padding-left: 40px;
+    position: absolute;
+}

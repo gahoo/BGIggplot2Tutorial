@@ -1,0 +1,499 @@
+---
+title: "R语言绘图入门"
+author: "lijiaping@bgitechsolutions.com"
+date: "2014年7月23日"
+output:
+  ioslides_presentation:
+    css: css/styles.css
+    logo: img/logo.png
+runtime: shiny
+---
+## 自我介绍
+- 山东云实验室
+- 信息分析
+- 入职2年
+- 经常用R
+- 关注可视化领域
+
+## 课程简介
+- 课程名称：R语言绘图入门（ggplot2 Tutorial）
+- 课程类别：信息类
+- 面向对象：有初步R语言使用经验的生物信息人员
+- 授课方式：课堂教学
+- 课程特色：结合实际项目数据讲解，实用易学上手快
+- 课程收获：使用R绘制信息分析常见图形的基本方法与绘图技巧
+
+## 课程简介
+Why? 一图解千言，图是展现数据的优秀形式。但目前常用流程中的图杂乱无章，存在许多问题。R是优秀的统计计算环境，常用于绘制出版级图片。ggplot2是由Hadley Wickham开发的基于图形语法的绘图系统，也是个R包。ggplot使用简单方便，绘制的图片漂亮。
+
+> * 教学目的
+    - ggplot2的基本用法
+    - 了解常见图形的类型与绘制方法
+    - 了解绘图需注意事项
+
+> * 教学重点
+    - 图形的语法
+
+> * 教学难点
+    - 对图形语法的理解
+
+## 参考教程
+<div class="columns-2">
+  ![ggplot2数据分析与图形艺术](img/ggplot2.jpg)
+  ![鲜活的数据](img/鲜活的数据.jpg)
+</div>
+
+## 课程内容
+<div class="columns-2">
+* R数据结构复习
+* 数据加载
+* ggplot2简介
+    - 为何用ggplot2
+    - 作者简介
+    - 其他绘图包 base, grid, lattice
+* 图形的语法
+    - 数据
+    - 映射
+    - 几何对象
+    - 统计变换
+    - 标度
+    - 坐标系
+
+* 交互式图表
+    - ggvis
+    - rCharts
+    - ReCharts
+    - googleVis
+</div>
+
+# 试讲：几何对象|geom_*()
+
+## geom
+The `geom` objects render the layers. Controlling the plot types. Every `geom` has it's own _Aesthetics_, which modifies how the `geom` looks like.
+
+* `geom_line`
+* `geom_point`
+* `geom_area`
+* `geom_bar`
+* `geom_boxplot`
+* `geom_tile`
+* <del>`geom_pie`</del>
+
+```{r, echo=F}
+buildCodesHtml<-function(src, outputName, opts=c("eval=F", "echo=T")){
+  library(knitr)
+  opts<-paste(opts, sep="", collapse=", ")
+  src=paste(
+    sprintf("```{r, %s}",opts),
+    src,
+    "```", sep = '\n')
+  opts_knit$set(progress = FALSE)
+  if (length(src) == 0L || src == '')
+    return('Nothing to show yet...')
+  on.exit(unlink('figure/', recursive = TRUE)) # do not need the figure dir
+  highlight<-sprintf("$('#%s pre code').each(function(i, e) {hljs.highlightBlock(e)});", outputName)
+  paste(try(knit2html(text = src, fragment.only = TRUE)),
+        '<script>',
+        '// highlight code blocks',
+        highlight,
+        'MathJax.Hub.Typeset(); // update MathJax expressions',
+        '</script>', sep = '\n')
+}
+```
+
+## Dataset
+The dataset we used to demonstrate is fqcheck which is very common and simple. First we have to load the data into R.
+```{r}
+library(reshape2)
+fqcheck<-read.table('datasets/1.fqcheck',row.names=NULL,header=T)
+#fqcheck$Pos<-factor(fqcheck$Pos)
+base_comp<-melt(fqcheck[,1:6],id="Pos")
+head(base_comp)
+```
+<aside class="note">
+  <section>
+```{r, echo=FALSE, results = 'asis'}
+library(knitr)
+kable(head(fqcheck[,1:6]), format='html', caption = "Before Melt (fqcheck[,1:6])", 
+      align='c', table.attr = 'width="600"')
+HTML('<hr>')
+kable(head(base_comp), format='html', caption = "After Melt (base_comp)",
+      align='c')
+```
+  </section>
+</aside>
+
+## `geom_line`
+The data maps to the attribues of `geom`. As we change the _Aesthetics_, the plot changes.
+```{r, echo=FALSE}
+inputPanel(
+  selectInput("line_color", label = "colour:",
+              choices = c('NULL',names(base_comp)), selected = 'NULL'),
+  selectInput("line_fill", label = "fill:",
+              choices = c('NULL', names(base_comp)), selected = 'NULL'),
+  selectInput("line_size", label = "size:",
+              choices = c('NULL', names(base_comp)), selected = 'NULL'),
+  selectInput("linetype", label = "linetype:",
+              choices = c('NULL', names(base_comp)), selected = 'variable')
+)
+```
+<br>
+
+```{r, echo=FALSE}
+library(ggplot2)
+
+src_line = reactive({sprintf("ggplot(base_comp) + 
+   geom_line(aes(x=Pos,y=value)) + 
+   aes(colour=%s, fill=%s, linetype=%s, size=%s)",
+   input$line_color,input$line_fill,input$linetype,input$line_size)})
+
+codes_line=reactive({
+  buildCodesHtml(src_line(), "codes_line",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
+renderUI({HTML(codes_line())})
+
+```
+
+<aside class="note">
+```{r, echo=FALSE}
+renderPlot({
+  p<-ggplot(base_comp) + 
+   geom_line(aes(x=Pos,y=value)) + 
+    aes_string(colour=input$line_color, fill=input$line_fill,
+               linetype=input$linetype, size=input$line_size)
+  print(p)
+})
+```
+</aside>
+
+## `geom_point`
+When we want points rather than lines, change `geom_line` to `geom_point`. That's all. What about lines and points togeter? `+` is all you need, multiple layer can be plot with `+`.
+
+```{r, echo=FALSE}
+inputPanel(
+  selectInput("point_color", label = "colour:",
+              choices = c('NULL',names(base_comp)), selected = 'NULL'),
+  selectInput("point_fill", label = "fill:",
+              choices = c('NULL', names(base_comp)), selected = 'NULL'),
+  selectInput("point_size", label = "size:",
+              choices = c('NULL', names(base_comp)), selected = 'NULL'),
+  selectInput("point_shape", label = "shape:",
+              choices = c('NULL', names(base_comp)), selected = 'variable'),
+  checkboxInput('geom_line',label = 'geom_line', value = FALSE)
+)
+```
+<br>
+```{r, echo=FALSE}
+line_src=reactive({
+  line_src=''
+  if(input$geom_line){
+    line_src='geom_line() +\n   '
+    }
+  line_src
+})
+
+src_point = reactive({sprintf("ggplot(base_comp,aes(x=Pos,y=value)) + 
+   geom_point() + 
+   %saes(colour=%s, fill=%s, shape=%s, size=%s)",line_src(),
+   input$point_color,input$point_fill,input$point_shape,input$point_size)})
+
+codes_point=reactive({
+  buildCodesHtml(src_point(), "codes_point",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
+renderUI({HTML(codes_point())})
+```
+
+
+<aside class="note">
+```{r, echo=FALSE}
+renderPlot({
+  p<-ggplot(base_comp) + 
+   geom_point(aes(x=Pos,y=value)) + 
+    aes_string(colour=input$point_color, fill=input$point_fill,
+               shape=input$point_shape, size=input$point_size)
+  if(input$geom_line){
+    p<-p+geom_line(aes(x=Pos,y=value))
+    }
+  print(p)
+})
+```
+</aside>
+
+## `geom_area`
+An area plot can be used to show how composition of the whole varies over the range of x. It looks like `geom_line`, but hightlights the composition with aera.
+```{r, echo=FALSE}
+inputPanel(
+  selectInput("aera_color", label = "colour:",
+              choices = c('NULL',names(base_comp)), selected = 'NULL'),
+  selectInput("aera_fill", label = "fill:",
+              choices = c('NULL', names(base_comp)), selected = 'NULL'),
+  selectInput("aera_size", label = "size:",
+              choices = c('NULL', names(base_comp)), selected = 'NULL'),
+  selectInput("aera_linetype", label = "linetype:",
+              choices = c('NULL', names(base_comp)), selected = 'variable'),
+  selectInput("aera_alpha", label = "alpha:",
+              choices = c('NULL', names(base_comp)), selected = 'NULL')
+  #sliderInput("aera_alpha_slider", label = "alpha:",
+  #            min=1/256, max=1, value=1, animate=TRUE)
+)
+```
+<br>
+
+```{r, echo=FALSE}
+src_aera = reactive({sprintf("ggplot(base_comp) + 
+   geom_area(aes(x=Pos,y=value)) + 
+   aes(colour=%s, fill=%s, linetype=%s, size=%s, alpha=%s)",
+   input$aera_color,input$aera_fill,input$aera_linetype,
+   input$aera_size,input$aera_alpha)})
+
+codes_aera=reactive({
+  buildCodesHtml(src_aera(), "codes_aera",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
+renderUI({HTML(codes_aera())})
+
+```
+
+<aside class="note">
+```{r, echo=FALSE}
+renderPlot({
+  p<-ggplot(base_comp) + 
+   geom_area(aes(x=Pos,y=value)) + 
+    aes_string(colour=input$aera_color, fill=input$aera_fill,
+               linetype=input$aera_linetype, size=input$aera_size,
+               alpha=input$aera_alpha)
+  print(p)
+})
+```
+</aside>
+
+## `geom_bar`
+Barplot is commonly used. The default `stat` is `bin`, which counts the variables. But most of the time we need `identity` to map the bar height to a specific variable. `position` controls how the bars place, `stack` or `dodge`.
+```{r, echo=FALSE}
+inputPanel(
+  selectInput("bar_stat", label = "stat:",
+              choices = c('bin', 'identity'), selected = 'bin'),
+  selectInput("bar_position", label = "position:",
+              choices = c('stack', 'dodge'), selected = 'stack'),
+  selectInput("bar_fill", label = "fill:",
+              choices = c('NULL', names(base_comp)), selected = 'variable'),
+  selectInput("bar_weight", label = "weight:",
+              choices = c('NULL', names(base_comp)), selected = 'NULL')
+)
+```
+<br>
+
+```{r, echo=FALSE}
+bar_src=reactive({
+  if(input$bar_stat=='identity'){
+    bar_src='aes(x=Pos,y=value)'
+  }else{
+    bar_src='aes(x=Pos)'
+  }
+  bar_src
+})
+
+src_bar = reactive({sprintf("base_comp_10<-subset(base_comp, Pos<10)
+ggplot(base_comp_10, %s) + 
+   geom_bar(stat=%s, position=%s) + 
+   aes(fill=%s,weight=%s)",bar_src(),
+   input$bar_stat, input$bar_position, input$bar_fill, input$bar_weight
+   )})
+
+codes_bar=reactive({
+  buildCodesHtml(src_bar(), "codes_bar",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
+renderUI({HTML(codes_bar())})
+
+```
+
+<aside class="note">
+```{r, echo=FALSE}
+renderPlot({
+  base_comp_10<-subset(base_comp, Pos<10)
+  p<-ggplot(base_comp_10)
+  if(input$bar_stat=='bin'){
+    p<-p+aes(x=Pos)
+  }else{
+    p<-p+aes(x=Pos,y=value)
+  }
+   p<- p + geom_bar(stat=input$bar_stat,position=input$bar_position) + 
+    aes_string(fill=input$bar_fill, weight=input$bar_weight)
+  print(p)
+})
+```
+</aside>
+
+## `geom_boxplot`
+In descriptive statistics, a box plot or boxplot is a convenient way of graphically depicting groups of numerical data through their quartiles. Outliers may be plotted as individual points. The default `stat` is `boxplot`, which turn variables into boxplot. When `stat` was set to `identity`, `lower`,`middle`,`upper`,`x`,`ymax`,`ymin` must be feed to `aes()`.
+
+```{r, echo=FALSE}
+inputPanel(
+  sliderInput("box_Pos", label = "Pos < ", min=1, max=90,
+              value=90, step=5, animate = animationOptions(interval=2000)),
+  checkboxInput("box_notch", label = "notch", value=FALSE)
+)
+```
+<br>
+```{r, echo=FALSE}
+src_box = reactive({sprintf("base_comp_sub<-subset(base_comp, Pos<%s)
+ggplot(base_comp_sub, aes(x=variable,y=value)) + 
+   geom_boxplot(notch=%s, aes(fill=variable))",
+   input$box_Pos,input$box_notch
+   )})
+
+codes_box=reactive({
+  buildCodesHtml(src_box(), "codes_box",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
+renderUI({HTML(codes_box())})
+```
+
+<aside class="note">
+```{r, echo=FALSE}
+renderPlot({
+  base_comp_10<-subset(base_comp, Pos<input$box_Pos)
+  p<-ggplot(base_comp_10,aes(x=variable,y=value))+
+    geom_boxplot(notch=input$box_notch) + 
+    aes_string(fill='variable')
+  print(p)
+})
+```
+</aside>
+
+## `geom_tile`
+Before we use `geom_tile`, dataset was `melt` again to feed `ggplot`.
+```{r}
+base_qual<-fqcheck[c(1,7:48)]
+colnames(base_qual)<-c('Pos',0:41)
+base_qual<-melt(base_qual,id='Pos')
+colnames(base_qual)<-c('Pos', 'Qual', 'value')
+head(base_qual)
+```
+<aside class="note">
+  <section>
+    <div style="width: 500px; height: 600px;overflow: scroll;">
+```{r, echo=FALSE, results='asis'}
+kable(fqcheck[c(1,7:48)], format='html', align='c',
+      caption = "Before Melt (fqcheck[,c(1,7:48)])")
+```
+    </div>
+  </section>
+</aside>
+
+## `geom_tile`
+With the `melt`ed dataset, `geom_tile` was able to plot heatmap. Changing the default color is simple. `scale_fill_gradient` or `scale_fill_gradient2` could map *value* to the color filled in the tile. `scal` will be discuss in the next section in detail.
+
+```{r, echo=FALSE}
+inputPanel(
+  checkboxInput('tile_scale','scale_fill_gradient',value=FALSE),
+  textInput('tile_fill_low','low',value='white'),
+  textInput('tile_fill_high','high',value='green'),
+  checkboxInput('tile_scale2','scale_fill_gradient2',value=FALSE),
+  sliderInput('tile_fill_midpoint','midpoint',
+              min=min(base_qual$value), max=max(base_qual$value),
+              value=mean(base_qual$value))
+  )
+```
+
+<br>
+```{r, echo=FALSE}
+tile_src=reactive({
+  if(input$tile_scale2){
+    return(sprintf("+\n    scale_fill_gradient2(low='%s',high='%s',midpoint=%s)",
+            input$tile_fill_low,input$tile_fill_high,input$tile_fill_midpoint))
+  }else if(input$tile_scale){
+    return(sprintf("+\n    scale_fill_gradient(low='%s',high='%s')",
+            input$tile_fill_low,input$tile_fill_high))
+  }else{
+    return("")
+  }
+})
+
+src_tile = reactive({sprintf("ggplot(base_qual,aes(x=Pos,y=Qual)) +
+    geom_tile(aes(fill=value))%s",tile_src()
+   )})
+
+codes_tile=reactive({
+  buildCodesHtml(src_tile(), "codes_tile",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
+renderUI({HTML(codes_tile())})
+```
+
+<aside class="note">
+```{r, echo=FALSE}
+renderPlot({
+  p<-ggplot(base_qual,aes(x=Pos,y=Qual)) +
+    geom_tile(aes(fill=value))
+  if(input$tile_scale2){
+    p<-p + scale_fill_gradient2(low=input$tile_fill_low,high=input$tile_fill_high,midpoint=input$tile_fill_midpoint)
+  }else if(input$tile_scale){
+    p<-p + scale_fill_gradient(low=input$tile_fill_low,high=input$tile_fill_high)
+  }
+  print(p)
+})
+```
+</aside>
+
+## <del>`goem_pie`</del>|`goem_bar`
+There no *goem_pie* geom object. How to plot an Pie? *DON'T!* Our eyes is more sensitive to _length_ rather than _angle_. Use `geom_bar` instead. But if you really want an Pie, try `coord_polar`.
+```{r, echo=FALSE}
+inputPanel(
+  checkboxInput('pie','pie? no, coord_polar'), value=FALSE)
+```
+
+```{r, echo=FALSE}
+pie_src=reactive({
+  if(input$pie){
+    return('+\n  aes(x = factor(1))+\n  coord_polar(theta = "y")')
+  }else{
+    return("")
+  }
+})
+
+src_pie = reactive({sprintf("base_comp_0<-subset(base_comp, Pos==0)
+ggplot(base_comp_0, aes(x=variable,y=value,fill=variable)) + 
+  geom_bar(stat='identity', width=1)%s",pie_src()
+   )})
+
+codes_pie=reactive({
+  buildCodesHtml(src_pie(), "codes_pie",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
+renderUI({HTML(codes_pie())})
+subset(base_comp, Pos==0)
+```
+
+<aside class="note">
+```{r, echo=FALSE}
+renderPlot({
+  (base_comp_0<-subset(base_comp, Pos==0))
+  p<-ggplot(base_comp_0, aes(x=variable,y=value,fill=variable)) + 
+    geom_bar(stat='identity', width=1)
+  if(input$pie){
+    p<-p + aes(x=factor(1))+ coord_polar(theta = "y")
+  }
+  print(p)
+})
+```
+</aside>
+
+## Summary
+- `geom_*` renders layers for `ggplot`.
+- The `aes()` mappings connects the data and tells `geom` how to render the layer.
+- Each `geom` has it's own *Aesthetics*, such as colors, shapes, size etc. Some is required, while the others is optional. Set by `aes()`
+- Every `geom` has a default `stat`. And every `stat` has a default `geom`. `stat` will be discuss later.
+- Human eyes is more sensitive to length, not angle.
+
+# Thankyou|Questions?
