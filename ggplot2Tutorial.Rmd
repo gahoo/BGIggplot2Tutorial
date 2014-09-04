@@ -8,8 +8,7 @@ output:
     logo: img/logo.png
 runtime: shiny
 ---
-# ![ggplot2数据分析与图形艺术](img/ggplot2.jpg)
-二维码here
+# |[点](https://github.com/gahoo/BGIggplot2Tutorial/)扫我下教程：![github link](img/barcode.png)
 
 # R
 ## R的历史
