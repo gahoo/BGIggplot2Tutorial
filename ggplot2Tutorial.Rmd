@@ -256,7 +256,7 @@ patientdata
 ### R语言中的面向对象
 - S3：列表加上类名属性和调度（dispatch）功能。后者使得泛型函数的使用变得可能。
 - S4：增加了安全性，能避免意外防卫不存在的类组件。
-- RC（Reference classes,亦被成为S5）：RC对象系统的方法是在类中自定的，而不是泛型函数。
+- RC（Reference classes,亦被称为S5）：RC对象系统的方法是在类中自定的，而不是泛型函数。
 
 # ggplot2绘图入门
 ## ggplot2绘图入门
@@ -315,29 +315,230 @@ patientdata
 <aside>
 
 ## 图形对象的数据结构
-  数据
-	映射
-	图层
-	坐标
-	分面
-	options（主题）
+ggplot2中的一个图形对象就是包含以下内容的列表
+
+- 数据
+- 映射
+- 图层
+- 坐标
+- 分面
+- options（主题）
+
+# 图层
+## 图层
+- 数据
+    - 数据导入
+- 图形属性映射
+	  - ＋
+	  - 设定与映射
+	  - 分组
+- 几何对象
+- 统计变换
+- 位置调整
+
+## 数据
+ggplot2需要用数据框作为数据集，而分组时必须根据行而不能根据列。因此有时候需要用`reshape2`包将“宽”数据变成“长”数据，即将变量排成一列而不是放在不同的列上。`melt()`函数可以方便地将“宽”数据“溶解”成“长”数据，`cast()`函数能够将“溶解”了的数据框重新整理成需要的样子。
+```{r}
+library(reshape2)
+fqcheck<-read.table('datasets/1.fqcheck',row.names=NULL,header=T)
+#fqcheck$Pos<-factor(fqcheck$Pos)
+base_comp<-melt(fqcheck[,1:6],id="Pos")
+```
+### fqcheck
+<div style="height:300px;width=600px;overflow: scroll">
+```{r,echo=FALSE}
+renderDataTable(fqcheck)
+```
+</div>
+
+## 数据
+```{r, echo=FALSE, results = 'asis'}
+library(knitr)
+kable(head(fqcheck[,1:6]), format='html', caption = "Before Melt (fqcheck[,1:6])", 
+      align='c', table.attr = 'width="600"')
+HTML('<hr>')
+kable(head(base_comp), format='html', caption = "After Melt (base_comp)",
+      align='c', table.attr = 'width="600"')
+```
+
+## 数据
+```{r}
+library(ggplot2)
+p<-ggplot(base_comp, aes(x=Pos, y=value))
+p+geom_point()
+```
+
+
+```{r, echo=F}
+buildCodesHtml<-function(src, outputName, opts=c("eval=F", "echo=T")){
+  library(knitr)
+  opts<-paste(opts, sep="", collapse=", ")
+  src=paste(
+    sprintf("```{r, %s}",opts),
+    src,
+    "```", sep = '\n')
+  opts_knit$set(progress = FALSE)
+  if (length(src) == 0L || src == '')
+    return('Nothing to show yet...')
+  on.exit(unlink('figure/', recursive = TRUE)) # do not need the figure dir
+  highlight<-sprintf("$('#%s pre code').each(function(i, e) {hljs.highlightBlock(e)});", outputName)
+  paste(try(knit2html(text = src, fragment.only = TRUE)),
+        '<script>',
+        '// highlight code blocks',
+        highlight,
+        'MathJax.Hub.Typeset(); // update MathJax expressions',
+        '</script>', sep = '\n')
+}
+```
+
+## 图层
+- 数据
+    - 数据导入
+- 图形属性映射
+    - ＋
+	  - 设定与映射
+	  - 分组
+- 几何对象
+- 统计变换
+- 位置调整
+
+## 图形属性映射
+`aes()`函数用来将数据变量映射到图形中，从而使变量成为可感知的图形属性。
+```{r,echo=FALSE}
+inputPanel(
+  selectInput("aes_colour", label = "colour:",
+              choices = c('NULL',names(base_comp)), selected = 'NULL'),
+  selectInput("aes_fill", label = "fill:",
+              choices = c('NULL', names(base_comp)), selected = 'NULL'),
+  selectInput("aes_size", label = "size:",
+              choices = c('NULL', names(base_comp)), selected = 'NULL')
+  #selectInput("aes_linetype", label = "linetype:",
+  #            choices = c('NULL', names(base_comp)), selected = 'variable')
+)
+
+
+src_aes= reactive({sprintf(
+  "pp <- p + aes(colour=%s, fill=%s, size=%s)
+pp + geom_point()",
+  input$aes_colour,input$aes_fill,
+  #input$aes_linetype,
+  input$aes_size)})
+
+codes_aes=reactive({
+  buildCodesHtml(src_aes(), "codes_aes",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
+renderUI({HTML(codes_aes())})
+```
 
 <aside class="note">
   <section>
-  ggplot2中的一个图形对象就是包含上述内容的列表
+```{r,echo=FALSE,fig.width=4,fig.height=7}
+renderPlot({
+    print(p + aes_string(colour=input$aes_colour, fill=input$aes_fill,
+              size=input$aes_size) + geom_point())
+    })
+```
   </section>
 </aside>
 
-# 图层
-数据
-  数据导入
-图形属性映射
-	＋
-	设定与映射
-	分组
-几何对象
-统计变换
-位置调整
+## +
+如前例所示，默认的图形属性映射可以在初始化时设置，也可以后来用`+`修改。`+` 很好地体现了图层的概念。
+```{r,echo=FALSE}
+inputPanel(
+  selectInput("plus_colour", label = "colour:",
+              choices = c('NULL',names(base_comp)), selected = 'NULL'),
+  selectInput("plus_fill", label = "fill:",
+              choices = c('NULL', names(base_comp)), selected = 'NULL'),
+  selectInput("plus_size", label = "size:",
+              choices = c('NULL', names(base_comp)), selected = 'NULL'),
+  selectInput("plus_linetype", label = "linetype:",
+              choices = c('NULL', names(base_comp)), selected = 'variable'),
+  checkboxInput("plus_point", "geom_point",value=TRUE),
+  checkboxInput("plus_line", "geom_line",value=FALSE)
+)
+
+
+src_plus= reactive({
+plus_line=ifelse(input$plus_line,
+                 sprintf(" + geom_line(aes(linetype=%s))",
+                      input$plus_linetype),
+                 "")
+plus_point=ifelse(input$plus_point," + geom_point()","")
+  sprintf(
+  "pp <- p + aes(colour=%s, fill=%s, size=%s)
+pp%s%s",
+  input$plus_colour,input$plus_fill,
+  input$plus_size, plus_point, plus_line)})
+
+codes_plus=reactive({
+  buildCodesHtml(src_plus(), "codes_plus",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
+renderUI({HTML(codes_plus())})
+```
+
+<aside class="note">
+  <section>
+```{r,echo=FALSE,fig.width=4,fig.height=7}
+renderPlot({
+    pl<-p + aes_string(colour=input$plus_colour, fill=input$plus_fill,
+              size=input$plus_size)
+    if(input$plus_line){
+      pl <- pl+geom_line(aes_string(linetype=input$plus_linetype))
+    }
+    if(input$plus_point){
+      pl <- pl+geom_point()
+    }
+    print(pl)
+    })
+```
+  </section>
+</aside>
+
+## 分组
+图中所有的离散型变量的交互作用被设为分组的默认值，但有时候不能正确分组或图中没有离散型变量，就需要自定义分组。
+<div class="columns-2" style="height:50%">
+```{r,fig.align="center",fig.width=5,fig.height=4}
+pg <- ggplot(base_comp, 
+        aes(x=Pos, y=value))+
+  geom_line()
+pg
+#
+#
+#
+pg + aes(group=variable)
+```
+<div>
+
+## 图层
+- 数据
+    - 数据导入
+- 图形属性映射
+    - ＋
+    - 设定与映射
+	  - 分组
+- 几何对象
+- 统计变换
+- 位置调整
+
+## 几何对象
+## 统计变换
+## 位置调整
+
+## 图层
+- 数据
+    - 数据导入
+- 图形属性映射
+    - ＋
+    - 设定与映射
+    - 分组
+- 几何对象
+- 统计变换
+- 位置调整
+
 # 标度
 # 坐标系
 # 分面
