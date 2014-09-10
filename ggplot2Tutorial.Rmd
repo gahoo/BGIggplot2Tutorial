@@ -525,6 +525,70 @@ pg + aes(group=variable)
 - 位置调整
 
 ## 几何对象
+执行图层的实际渲染，控制生成的图像类型。每个几何对象都有一组图形属性。每个几何对象都有一个默认的统计变换，每个统计变换都有一个默认的几何对象。
+<div style="height:500px;overflow: scroll;"
+```{r,echo=FALSE}
+#func_names<-ls(getNamespace("ggplot2"))
+#func_geom<-func_names[grep("^geom",func_names)]
+#func_geom<-func_geom[!func_geom %in% c("geom_aesthetics")]
+#func_geom_args<-unlist(lapply(func_geom,function(x){paste(names(formals(x)),collapse=", ")}))
+#func_geom_df<-data.frame(names=func_geom, aesthetics=func_geom_args)
+func_geom_df<-read.delim('datasets/geom_desc.table.txt',
+                         sep='\t',as.is=TRUE,header=TRUE)
+renderDataTable(func_geom_df, 
+                options = list(bPaginate = FALSE,
+                               bFilter = FALSE))
+```
+</div>
+
+## 几何对象
+```{r,echo=FALSE}
+#head(func_geom_df)
+selection<-list()
+selection[['point']]<-list(x='Pos',y='value')
+selection[['point']][['x']]
+
+buildUI<-function(func){
+  aesthetics<-func_geom_df$Aesthetics[func_geom_df$Name==func]
+  aesthetics<-unlist(strsplit(aesthetics,split=', '))
+  lapply(aesthetics, function(aesth){
+    aes_id<-paste("geom",aesth,sep="_")
+    selected<-ifelse(aesth %in% c('x'),'Pos','NULL')
+    #selected<-ifelse(aesth %in% c('y'),'value','NULL')
+    selectInput(aes_id, aesth,
+                choices = c('NULL', names(base_comp)),
+                selected = selected)
+  })
+}
+
+aes_Strings<-reactive({
+  aesthetics<-func_geom_df$Aesthetics[func_geom_df$Name==input$geom]
+  aesthetics<-unlist(strsplit(aesthetics,split=', '))
+  aesStrings<-lapply(aesthetics, function(aesth){
+    value<-input[[paste("geom", aesth, sep='_')]]
+    message(value)
+    value
+  })
+  names(aesStrings)<-aesthetics
+  message(aesStrings)
+  aesStrings
+})
+
+geoms<-c('point','line','area','bar','boxplot','tile')
+
+inputPanel(
+  selectInput("geom", label = "geom:",
+              choices = c('NULL',geoms), selected = 'point'),
+  renderUI({buildUI(input$geom)})
+)
+
+renderPlot({
+  pa<-ggplot(base_comp, aes(x=Pos, y=value))
+  func<-paste("geom",input$geom,sep='_')
+  try(print(pa + do.call(aes_string,aes_Strings()) + do.call(func,list())))
+})
+```
+
 ## 统计变换
 ## 位置调整
 

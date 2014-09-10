@@ -1,0 +1,33 @@
+Name	Default stat	Description	Aesthetics
+abline	abline	Line, specified by slope and intercept	colour, linetype, size
+area	identity	Area plots	colour, fill, linetype, size, x, y
+bar	bin	Bars, rectangles with bases on y-axis	colour, fill, linetype, size, weight, x
+bin2d	bin2d	Add heatmap of 2d bin counts	colour, fill, linetype, size, weight, xmax, xmin, ymax, ymin
+blank	identity	Blank, draws nothing	colour, fill, lower, middle, size, upper, weight, x, ymax, ymin
+boxplot	boxplot	Box and whiskers plot	colour, linetype, size, weight, x, y
+contour	contour	Display contours of a 3d surface in 2d	colour, fill, linetype, size, x, y, ymax, ymin
+crossbar	identity	Hollow bar with middle indicated by horizontal line	colour, fill, linetype, size, weight, x, y
+density	density	Display a smooth density estimate	colour, linetype, size, weight, x, y
+density2d	density2d	Contours from a 2d density estimate	colour, linetype, size, width, x, ymax, ymin
+errorbar	identity	Error bars	colour, linetype, size
+freqpoly	bin	Frequency polygon	colour, fill, size, x, y
+hex	binhex	Hexagon bining	colour, fill, linetype, size, weight, x
+histogram	bin	Histogram	colour, linetype, size
+hline	hline	Line, horizontal	colour, fill, shape, size, x, y
+jitter	identity	Points, jittered to reduce overplotting	colour, linetype, size, x, y
+line	identity	Connect observations, in ordered by x value	colour, linetype, size, x, ymax, ymin
+linerange	identity	An interval represented by a vertical line	colour, linetype, size, x, y
+path	identity	Connect observations, in original order	colour, fill, shape, size, x, y
+point	identity	Points, as for a scatterplot	colour, fill, linetype, shape, size, x, y, ymax, ymin
+pointrange	identity	An interval represented by a vertical line, with a point in the middle	colour, fill, linetype, size, x, y
+polygon	identity	Polygon, a filled path	colour, linetype, size, weight, x, y
+quantile	quantile	Add quantile lines from a quantile regression	colour, fill, linetype, size, xmax, xmin, ymax, ymin
+rect	identity	2d rectangles.	colour, fill, linetype, size, x, ymax, ymin
+ribbon	identity	Ribbons, y range with continuous x values	colour, linetype, size
+rug	identity	Marginal rug plots	colour, linetype, size, x, xend, y, yend alpha,
+segment	identity	Single line segments	colour, fill, linetype, size, weight, x, y
+smooth	smooth	Add a smoothed condition mean.	colour, linetype, size, x, y
+step	identity	Connect observations by stairs	angle,
+text	identity	Textual annotations	colour, hjust, label, size, vjust, x, y
+tile	identity	Tile plot as densely as possible, assuming that every tile is the same size.	colour, fill, linetype, size, x, y
+vline	vline	Line, vertical	colour, linetype, size
