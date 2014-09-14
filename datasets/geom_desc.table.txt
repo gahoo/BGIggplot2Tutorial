@@ -15,7 +15,7 @@ hex	binhex	Hexagon bining	colour, fill, linetype, size, weight, x
 histogram	bin	Histogram	colour, linetype, size
 hline	hline	Line, horizontal	colour, fill, shape, size, x, y
 jitter	identity	Points, jittered to reduce overplotting	colour, linetype, size, x, y
-line	identity	Connect observations, in ordered by x value	colour, linetype, size, x, ymax, ymin
+line	identity	Connect observations, in ordered by x value	colour, linetype, size, x, y, ymax, ymin
 linerange	identity	An interval represented by a vertical line	colour, linetype, size, x, y
 path	identity	Connect observations, in original order	colour, fill, shape, size, x, y
 point	identity	Points, as for a scatterplot	colour, fill, linetype, shape, size, x, y, ymax, ymin

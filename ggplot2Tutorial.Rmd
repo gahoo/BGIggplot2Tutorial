@@ -345,9 +345,11 @@ fqcheck<-read.table('datasets/1.fqcheck',row.names=NULL,header=T)
 base_comp<-melt(fqcheck[,1:6],id="Pos")
 ```
 ### fqcheck
-<div style="height:300px;width=600px;overflow: scroll">
+<div style="height:280px;width=600px;overflow: scroll">
 ```{r,echo=FALSE}
-renderDataTable(fqcheck)
+renderDataTable(fqcheck,
+                options = list(bPaginate = FALSE,
+                               bFilter = FALSE))
 ```
 </div>
 
@@ -405,15 +407,32 @@ buildCodesHtml<-function(src, outputName, opts=c("eval=F", "echo=T")){
 ## 图形属性映射
 `aes()`函数用来将数据变量映射到图形中，从而使变量成为可感知的图形属性。
 ```{r,echo=FALSE}
-inputPanel(
-  selectInput("aes_colour", label = "colour:",
-              choices = c('NULL',names(base_comp)), selected = 'NULL'),
-  selectInput("aes_fill", label = "fill:",
-              choices = c('NULL', names(base_comp)), selected = 'NULL'),
-  selectInput("aes_size", label = "size:",
-              choices = c('NULL', names(base_comp)), selected = 'NULL')
-  #selectInput("aes_linetype", label = "linetype:",
-  #            choices = c('NULL', names(base_comp)), selected = 'variable')
+sidebarLayout(
+    sidebarPanel(
+      selectInput("aes_colour", label = "colour:",
+                  choices = c('NULL',names(base_comp)), selected = 'NULL'),
+      selectInput("aes_fill", label = "fill:",
+                  choices = c('NULL', names(base_comp)), selected = 'NULL'),
+      selectInput("aes_size", label = "size:",
+                  choices = c('NULL', names(base_comp)), selected = 'NULL'),
+      #selectInput("aes_linetype", label = "linetype:",
+      #            choices = c('NULL', names(base_comp)), selected = 'variable'),
+      width=3),
+    mainPanel(
+      tabsetPanel(
+        tabPanel('Code',
+                 renderUI({HTML(codes_aes())})
+                 ),
+        tabPanel('Fig',
+                 renderPlot({
+                    print(p + aes_string(colour=input$aes_colour, 
+                                         fill=input$aes_fill,
+                                         size=input$aes_size) + 
+                            geom_point())
+                    })
+                 )
+        )
+      )
 )
 
 
@@ -429,34 +448,45 @@ codes_aes=reactive({
                  opts=c("eval=F", "echo=T",
                         "background='#000000'", #useless
                         "tidy.opts=list(width.cutoff=32)"))})
-renderUI({HTML(codes_aes())})
-```
 
-<aside class="note">
-  <section>
-```{r,echo=FALSE,fig.width=4,fig.height=7}
-renderPlot({
-    print(p + aes_string(colour=input$aes_colour, fill=input$aes_fill,
-              size=input$aes_size) + geom_point())
-    })
 ```
-  </section>
-</aside>
 
 ## +
 如前例所示，默认的图形属性映射可以在初始化时设置，也可以后来用`+`修改。`+` 很好地体现了图层的概念。
 ```{r,echo=FALSE}
-inputPanel(
-  selectInput("plus_colour", label = "colour:",
-              choices = c('NULL',names(base_comp)), selected = 'NULL'),
-  selectInput("plus_fill", label = "fill:",
-              choices = c('NULL', names(base_comp)), selected = 'NULL'),
-  selectInput("plus_size", label = "size:",
-              choices = c('NULL', names(base_comp)), selected = 'NULL'),
-  selectInput("plus_linetype", label = "linetype:",
-              choices = c('NULL', names(base_comp)), selected = 'variable'),
-  checkboxInput("plus_point", "geom_point",value=TRUE),
-  checkboxInput("plus_line", "geom_line",value=FALSE)
+sidebarLayout(
+    sidebarPanel(
+      selectInput("plus_colour", label = "colour:",
+                  choices = c('NULL',names(base_comp)), selected = 'NULL'),
+      selectInput("plus_fill", label = "fill:",
+                  choices = c('NULL', names(base_comp)), selected = 'NULL'),
+      selectInput("plus_size", label = "size:",
+                  choices = c('NULL', names(base_comp)), selected = 'NULL'),
+      selectInput("plus_linetype", label = "linetype:",
+                  choices = c('NULL', names(base_comp)), selected = 'variable'),
+      checkboxInput("plus_point", "geom_point",value=TRUE),
+      checkboxInput("plus_line", "geom_line",value=FALSE)
+      ),
+    mainPanel(
+      tabsetPanel(
+        tabPanel('Codes',
+                 renderUI({HTML(codes_plus())})
+          ),
+        tabPanel('Fig',
+                 renderPlot({
+                    pl<-p + aes_string(colour=input$plus_colour, fill=input$plus_fill,
+                              size=input$plus_size)
+                    if(input$plus_line){
+                      pl <- pl+geom_line(aes_string(linetype=input$plus_linetype))
+                    }
+                    if(input$plus_point){
+                      pl <- pl+geom_point()
+                    }
+                    print(pl)
+                    })
+          )
+        )
+      )
 )
 
 
@@ -477,26 +507,9 @@ codes_plus=reactive({
                  opts=c("eval=F", "echo=T",
                         "background='#000000'", #useless
                         "tidy.opts=list(width.cutoff=32)"))})
-renderUI({HTML(codes_plus())})
-```
 
-<aside class="note">
-  <section>
-```{r,echo=FALSE,fig.width=4,fig.height=7}
-renderPlot({
-    pl<-p + aes_string(colour=input$plus_colour, fill=input$plus_fill,
-              size=input$plus_size)
-    if(input$plus_line){
-      pl <- pl+geom_line(aes_string(linetype=input$plus_linetype))
-    }
-    if(input$plus_point){
-      pl <- pl+geom_point()
-    }
-    print(pl)
-    })
+
 ```
-  </section>
-</aside>
 
 ## 分组
 图中所有的离散型变量的交互作用被设为分组的默认值，但有时候不能正确分组或图中没有离散型变量，就需要自定义分组。
@@ -544,53 +557,234 @@ renderDataTable(func_geom_df,
 ## 几何对象
 ```{r,echo=FALSE}
 #head(func_geom_df)
-selection<-list()
-selection[['point']]<-list(x='Pos',y='value')
-selection[['point']][['x']]
+xy<-c(x='Pos',y='value')
+selection<-list(point=as.list(c(xy,colour='variable')),
+                line=as.list(c(xy,colour='variable')),
+                area=as.list(c(xy,fill='variable')),
+                bar=as.list(c(x='value',fill='variable')),
+                boxplot=as.list(c(x='variable',y='value',colour='variable'))
+                #tile=as.list(c(x='variable',y='value',colour='variable'))
+                )
+aesth_ctrl<-c(x=selectInput,
+              y=selectInput)
 
 buildUI<-function(func){
   aesthetics<-func_geom_df$Aesthetics[func_geom_df$Name==func]
   aesthetics<-unlist(strsplit(aesthetics,split=', '))
-  lapply(aesthetics, function(aesth){
+  aesthetics<-c(aesthetics,'alpha')
+  aes_ctrls<-lapply(aesthetics, function(aesth){
     aes_id<-paste("geom",aesth,sep="_")
-    selected<-ifelse(aesth %in% c('x'),'Pos','NULL')
-    #selected<-ifelse(aesth %in% c('y'),'value','NULL')
     selectInput(aes_id, aesth,
                 choices = c('NULL', names(base_comp)),
-                selected = selected)
+                selected = selection[[func]][[aesth]])
   })
+  if(func=='bar'){
+    aes_ctrls[[length(aes_ctrls)+1]]<-"argument"
+    aes_ctrls[[length(aes_ctrls)+2]]<-
+      checkboxInput('geom_stat_identity', 'stat:identity', FALSE)
+  }
+  c('图形属性映射',
+    aes_ctrls)
 }
 
 aes_Strings<-reactive({
   aesthetics<-func_geom_df$Aesthetics[func_geom_df$Name==input$geom]
   aesthetics<-unlist(strsplit(aesthetics,split=', '))
+  aesthetics<-c(aesthetics,'alpha')
   aesStrings<-lapply(aesthetics, function(aesth){
-    value<-input[[paste("geom", aesth, sep='_')]]
-    message(value)
-    value
+    input[[paste("geom", aesth, sep='_')]]
   })
   names(aesStrings)<-aesthetics
-  message(aesStrings)
   aesStrings
 })
 
-geoms<-c('point','line','area','bar','boxplot','tile')
+geoms<-c('point','line','area','boxplot','bar')
 
-inputPanel(
-  selectInput("geom", label = "geom:",
-              choices = c('NULL',geoms), selected = 'point'),
-  renderUI({buildUI(input$geom)})
+sidebarLayout(
+    sidebarPanel(
+      '几何对象',
+      selectInput("geom", label = "geom:",
+                  choices = c('NULL',geoms), selected = 'point'),
+      renderUI({buildUI(input$geom)}),
+      style="height:450px;overflow: scroll;"
+      ),
+    mainPanel(
+      #tabsetPanel(
+        #tabPanel('Code',
+                 renderUI({HTML(codes_geom())}),
+         #        ),
+        #tabPanel('Fig',
+                 renderPlot({
+                  base_comp_sub<-base_comp
+                  if(input$geom=='boxplot'){
+                    base_comp_sub<-subset(base_comp,Pos<=10)
+                  }
+                  pa<-ggplot(base_comp_sub)
+                  func<-paste("geom",input$geom,sep='_')
+                  if(func=='geom_bar' && input$geom_stat_identity){
+                    geom_stat_identity<-list(stat='identity')
+                    pa<-pa+aes(y=value)
+                  }else{
+                    geom_stat_identity<-list()
+                  }
+                  try(print(pa + do.call(aes_string,aes_Strings()) +
+                              do.call(func,geom_stat_identity)))
+                  })
+         #        )
+      #)
+    )
 )
 
-renderPlot({
-  pa<-ggplot(base_comp, aes(x=Pos, y=value))
-  func<-paste("geom",input$geom,sep='_')
-  try(print(pa + do.call(aes_string,aes_Strings()) + do.call(func,list())))
-})
+src_geom= reactive({
+  aes_str<-aes_Strings()
+  idx_not_null<-grep('NULL',aes_str,invert=TRUE)
+  aes_str<-aes_str[idx_not_null]
+  aes_str<-paste(names(aes_str),aes_str,sep='=',collapse=', ')
+  aes_bar<-ifelse(input$geom=='bar' && input$geom_stat_identity,
+                  ', y=value','')
+  stat_str<-ifelse(input$geom=='bar' && input$geom_stat_identity,
+                   ', stat="identity"','')
+  sprintf(
+  "p <- ggplot2(base_comp)
+p + geom_%s(aes(%s%s)%s)",
+  input$geom,aes_str,aes_bar,stat_str)})
+
+codes_geom=reactive({
+  buildCodesHtml(src_geom(), "codes_geom",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
+
 ```
 
 ## 统计变换
+统计变换`stat`，即对数据进行统计变换，通常以某种方式对数据信息进行汇总。
+<div style="height:500px;overflow: scroll;"
+```{r, echo=FALSE}
+stat_df<-read.delim('datasets/stat_desc.table.txt',
+                         sep='\t',as.is=TRUE,header=TRUE)
+renderDataTable(stat_df, 
+                options = list(bPaginate = FALSE,
+                               bFilter = FALSE))
+```
+</div>
+
+## 统计变换
+```{r,echo=FALSE}
+inputPanel(
+  checkboxInput('stat_point', 'point', TRUE),
+  checkboxInput('stat_line', 'line', FALSE),
+  checkboxInput('stat_smooth', 'stat_smooth', FALSE)
+)
+
+src_smooth= reactive({
+  src_stat_point<-ifelse(input$stat_point,' + geom_point(aes(colour=variable))','')
+  src_stat_line<-ifelse(input$stat_line,' + geom_line(aes(colour=variable))','')
+  src_stat_smooth<-ifelse(input$stat_smooth,' + stat_smooth(aes(fill=variable))','')
+  sprintf(
+  "p <- ggplot2(base_comp,aes(Pos,value))
+p%s%s%s",src_stat_point,src_stat_line,src_stat_smooth)
+})
+
+codes_smooth=reactive({
+  buildCodesHtml(src_smooth(), "codes_smooth",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
+
+renderUI({HTML(codes_smooth())})
+renderPlot({
+  ps <- ggplot(base_comp)
+  ps <- ps + aes(Pos,value,colour=variable)
+  if(input$stat_point){
+    ps <- ps + geom_point() 
+  }
+  if(input$stat_line){
+    ps <- ps + geom_line() 
+  }
+  if(input$stat_smooth){
+    ps <- ps + stat_smooth(aes(fill=variable))
+  }
+  print(ps)
+})
+```
+
+```{r,eval=FALSE}
+p + geom_area(aes(fill=variable, x=value),stat='bin')
+p + aes(x=value)+stat_bin(aes(fill=variable),geom='bar')
+```
+
+## 统计变换
+```{r, echo=FALSE}
+inputPanel(
+  selectInput("stat_geom_geom", label = "geom:", width=160,
+                    choices = c('NULL','bar','area','density'), selected = 'bar'),
+  selectInput("stat_geom_stat", label = "stat:", width=160,
+                    choices = c('NULL','bin','density'), selected = 'bin'),
+  selectInput("stat_stat_geom", label = "geom:", width=160,
+                    choices = c('NULL','bar','area','density'), selected = 'bar'),
+  selectInput("stat_stat_stat", label = "stat:", width=160,
+                    choices = c('NULL','bin','density'), selected = 'bin')
+)
+```
+<div class="columns-2" style="height:440px">
+```{r,echo=FALSE}
+src_geom_stat= reactive({
+  sprintf(
+  "p + geom_%s(aes(fill=variable, x=value),stat='%s')",
+  input$stat_geom_geom, input$stat_geom_stat)
+})
+
+codes_geom_stat=reactive({
+  buildCodesHtml(src_geom_stat(), "codes_geom_stat",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
+
+renderUI({HTML(codes_geom_stat())})
+renderPlot({
+  geom_name<-paste('geom', input$stat_geom_geom, sep='_')
+  psg <- ggplot(subset(base_comp,variable!='N'))
+  psg + aes(fill=variable, x=value) +
+    do.call(geom_name, list(stat=input$stat_geom_stat))
+},height=300)
+
+br()
+
+src_stat_geom= reactive({
+  sprintf(
+  "p + stat_%s(aes(fill=variable, x=value),geom='%s')",
+  input$stat_stat_stat, input$stat_stat_geom)
+})
+
+codes_stat_geom=reactive({
+  buildCodesHtml(src_stat_geom(), "codes_stat_geom",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
+
+renderUI({HTML(codes_stat_geom())})
+renderPlot({
+  stat_name<-paste('stat', input$stat_stat_stat, sep='_')
+  pss <- ggplot(subset(base_comp,variable!='N'))
+  pss + aes(fill=variable, x=value) +
+    do.call(stat_name, list(geom=input$stat_stat_geom))
+},height=300)
+```
+
+</div>
+
 ## 位置调整
+所谓位置调整，即对该层中的元素位置进行微调。
+```{r}
+
+```
+
+## 位置调整
+```{r,echo=FALSE}
+ggplot(subset(base_comp,Pos <= 10),aes(Pos,value,fill=variable)) + geom_bar(stat='identity', position='dodge')
+```
+
 
 ## 图层
 - 数据
@@ -604,6 +798,17 @@ renderPlot({
 - 位置调整
 
 # 标度
+```{r}
+base_qual<-fqcheck[c(1,7:48)]
+colnames(base_qual)<-c('Pos',0:41)
+base_qual<-melt(base_qual,id='Pos')
+colnames(base_qual)<-c('Pos', 'Qual', 'value')
+head(base_qual)
+ggplot(base_qual,aes(x=Pos,y=Qual)) +
+    geom_tile(aes(fill=value))+
+    scale_fill_gradient(low='white',high='green')
+```
+
 # 坐标系
 # 分面
 # 主题
