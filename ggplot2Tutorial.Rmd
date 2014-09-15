@@ -776,15 +776,44 @@ renderPlot({
 
 ## 位置调整
 所谓位置调整，即对该层中的元素位置进行微调。
-```{r}
-
+```{r, echo=FALSE}
+position_df<-read.delim('datasets/position_desc.table.txt',
+                         sep='\t',as.is=TRUE,header=TRUE)
+renderDataTable(position_df, 
+                options = list(bPaginate = FALSE,
+                               bFilter = FALSE))
 ```
 
 ## 位置调整
 ```{r,echo=FALSE}
-ggplot(subset(base_comp,Pos <= 10),aes(Pos,value,fill=variable)) + geom_bar(stat='identity', position='dodge')
-```
+inputPanel(
+  selectInput("position", label = "position:",
+              choices = c('dodge','fill','identity','jitter','stack'),
+              selected = 'stack')
+)
 
+src_position= reactive({
+  sprintf(
+  "base_comp_sub <- subset(base_comp,Pos <= 10 & variable!='A')
+p <- ggplot(base_comp_sub, aes(Pos,value,fill=variable))
+p + geom_bar(stat='identity', position='%s')",
+  input$position)
+})
+
+codes_position=reactive({
+  buildCodesHtml(src_position(), "codes_position",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
+
+renderUI({HTML(codes_position())})
+renderPlot({
+  base_comp_sub<-subset(base_comp,Pos <= 10 & variable!='A')
+  p<-ggplot(base_comp_sub,
+            aes(Pos,value,fill=variable))
+  p+geom_bar(stat='identity', position=input$position)
+},height=300)
+```
 
 ## 图层
 - 数据
@@ -798,6 +827,32 @@ ggplot(subset(base_comp,Pos <= 10),aes(Pos,value,fill=variable)) + geom_bar(stat
 - 位置调整
 
 # 标度
+## 标度
+标度`scale`控制着数据到图形属性`aes`的映射。
+- 工作原理
+    - 定义域
+    - 值域
+- 用法
+- 类型
+    - 位置标度
+    - 颜色标度
+    - 手动标度
+    - 同一型标度
+- 图例和坐标轴
+
+## 标度工作原理
+- 定义域
+    - 离散：variable={A, T, G, C, N}
+    - 连续：value=[0, 48.6]
+- 值域
+    - 离散：scale_colour\_discrete(variable)={red, green, blue, yellow, purple}
+    - 连续：scale_colour\_continue(value)=[white -> blue]
+- 映射过程
+    - 变换
+    - 训练
+    - 映射
+    
+## 标度
 ```{r}
 base_qual<-fqcheck[c(1,7:48)]
 colnames(base_qual)<-c('Pos',0:41)
