@@ -1,0 +1,16 @@
+Aesthetic	Discrete	Continuous
+Colour, fill	brewer	gradient
+	grey	gradient2
+	hue	gradientn
+	identity
+	manual
+Position (x, y)	discrete	<bold>continuous</bold>
+		date
+Shape	shape
+	identity
+	manual
+Line type	linetype
+	identity
+	manual
+Size	identity	size
+	manual

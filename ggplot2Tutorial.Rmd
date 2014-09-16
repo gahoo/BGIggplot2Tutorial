@@ -709,11 +709,6 @@ renderPlot({
 })
 ```
 
-```{r,eval=FALSE}
-p + geom_area(aes(fill=variable, x=value),stat='bin')
-p + aes(x=value)+stat_bin(aes(fill=variable),geom='bar')
-```
-
 ## 统计变换
 ```{r, echo=FALSE}
 inputPanel(
@@ -828,7 +823,8 @@ renderPlot({
 
 # 标度
 ## 标度
-标度`scale`控制着数据到图形属性`aes`的映射。
+$scale\left( data \right) = aesthetics\{color, size, shape\}$
+
 - 工作原理
     - 定义域
     - 值域
@@ -840,17 +836,59 @@ renderPlot({
     - 同一型标度
 - 图例和坐标轴
 
+<aside class="note">
+  <section>
+  标度`scale`控制着数据到图形属性`aes`的映射。
+  数据->大小，颜色、位置、形状
+  提供了读图时所使用的工具：坐标轴、图例
+  准确地说，每种标度都是从数据空间的某个区域（定义域）到图形属性空间的某个区域（值域）的一个函数
+  </seciton>
+</aside>
+
+
 ## 标度工作原理
+$scale\left( data \right) = aesthetics\{color, size, shape\}$
+
 - 定义域
-    - 离散：variable={A, T, G, C, N}
-    - 连续：value=[0, 48.6]
+    - 离散：$base = \{A, T, G, C, N\}$
+    - 连续：$value = [0, 48.6]$
 - 值域
-    - 离散：scale_colour\_discrete(variable)={red, green, blue, yellow, purple}
-    - 连续：scale_colour\_continue(value)=[white -> blue]
+    - 离散：$scale\_colour\_discrete(base)=\{red, green, ...\}$
+    - 连续：$scale\_colour\_continue(value)=[white \Rightarrow blue]$
 - 映射过程
-    - 变换
-    - 训练
-    - 映射
+    - 变换：$log(data), sqrt(data)$
+    - 训练：$min, max, enumerate\{levels\} \Rightarrow coord$
+    - 映射：$data \Rightarrow aesthestics$
+
+<aside class="note">
+  <section>
+  - 变换：对数据进行变换后再进行展示
+  - 训练：通过学习得到标度的定义域
+  - 映射：执行映射数据到图形属性的函数
+  </section>
+</aside>
+
+## 用法
+每种图形属性都有一个默认的标度。
+<div style="height:500px;overflow:scroll">
+```{r,echo=FALSE}
+scale_df<-read.delim('datasets/scale_desc.table.txt',
+                         sep='\t',as.is=TRUE,header=TRUE)
+renderDataTable(scale_df, 
+                options = list(bPaginate = FALSE,
+                               bFilter = FALSE))
+```
+</div>
+
+<aside class="note">
+  <section>
+  - 连续型：数值
+  - 离散型：因子、逻辑值、字符
+  
+  初始化整个图形和增加新图层时，默认标度会被自动添加。如果再之后修改了底层数据或图形属性映射，变量类型和标度类型之间可能会出现不匹配。需要自行添加正确的标度。
+  </section>
+</aside>
+
     
 ## 标度
 ```{r}
