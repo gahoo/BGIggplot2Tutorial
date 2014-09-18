@@ -889,14 +889,155 @@ renderDataTable(scale_df,
   </section>
 </aside>
 
-    
-## 标度
+## 标度类型
+- 位置标度：
+    - 连续、离散、时间->坐标轴
+- 颜色标度：
+    - 连续、离散->颜色
+- 手动标度：
+    - 离散->符号大小、线条类型、形状、颜色
+- 同一型标度：
+    - 直接绘制不映射
+
+## 位置标度
+```{r,echo=FALSE}
+sidebarLayout(
+  sidebarPanel(
+    textInput('scale_pos_name', label='name',value='Position'),
+    textInput('scale_pos_breaks', label='breaks',
+              value='0:9*10'),
+    sliderInput('scale_pos_limits', label='limits', value = c(0,90),
+                min=0, max=90, step = 5, animate = T),
+    selectInput('scale_pos_trans', label='trans',
+                choices = c('identity', 'log', 'log10', 'sqrt'),
+                selected='identity')
+    ),
+  mainPanel(
+    tabsetPanel(
+      tabPanel("Code", renderUI({HTML(codes_scale_pos())}) ),
+      tabPanel("Fig", renderPlot(fig_scale_pos()) )
+      )
+  )
+)
+
+fig_scale_pos=reactive({
+      p + geom_point(aes(colour=variable)) +
+      scale_x_continuous(input$scale_pos_name,
+                         breaks=eval(parse(text=input$scale_pos_breaks)),
+                         limits=input$scale_pos_limits,
+                         trans=input$scale_pos_trans
+                         )
+    })
+
+src_scale_pos= reactive({
+  lim<-input$scale_pos_limits
+  sprintf(
+  "p + geom_point(aes(colour=variable)) +
+    scale_x_continuous(name='%s',
+                       breaks=%s,
+                       limits=c(%s, %s),
+                       trans='%s')
+# p + xlab(%s)
+# p + labs(x='%s'))
+# p + xlim(%s, %s)
+# p + scale_x_log10()",
+  input$scale_pos_name,input$scale_pos_breaks,
+  lim[1],lim[2],input$scale_pos_trans,
+  input$scale_pos_name,
+  input$scale_pos_name,
+  lim[1],lim[2])
+})
+
+codes_scale_pos=reactive({
+  buildCodesHtml(src_scale_pos(), "codes_scale_pos",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
+```
+
+## 颜色标度
 ```{r}
 base_qual<-fqcheck[c(1,7:48)]
 colnames(base_qual)<-c('Pos',0:41)
 base_qual<-melt(base_qual,id='Pos')
 colnames(base_qual)<-c('Pos', 'Qual', 'value')
-head(base_qual)
+```
+<div style="height:350px;overflow:scroll">
+```{r,echo=FALSE}
+tabsetPanel(
+  tabPanel("Before",
+           renderDataTable(fqcheck[c(1,7:48)],
+                           options = list(bPaginate = FALSE,
+                           bFilter = FALSE))
+      ),
+  tabPanel("After",
+           renderDataTable(base_qual,
+                           options = list(bPaginate = FALSE,
+                           bFilter = FALSE))
+      )
+)
+
+```
+</div>
+
+## 颜色标度(连续型)
+```{r, echo=FALSE}
+#Change my font size
+theme_set(theme_bw())
+inputPanel(
+  selectInput('scale_color_func', label='function:',
+              choices = c('scale_colour_gradient',
+                          'scale_colour_gradient2',
+                          'scale_fill_gradient',
+                          '<离散型>',
+                          'scale_colour_brewer'),
+              selected = 'scale_color_gradient'),
+  checkboxInput('tile_scale','scale_fill_gradient',value=FALSE),
+  textInput('tile_fill_low','low',value='white'),
+  textInput('tile_fill_high','high',value='green'),
+  checkboxInput('tile_scale2','scale_fill_gradient2',value=FALSE),
+  sliderInput('tile_fill_midpoint','midpoint',
+              min=min(base_qual$value), max=max(base_qual$value),
+              value=mean(base_qual$value))
+)
+
+tile_src=reactive({
+  if(input$tile_scale2){
+    return(sprintf("+\n    scale_fill_gradient2(low='%s',high='%s',midpoint=%s)",
+            input$tile_fill_low,input$tile_fill_high,input$tile_fill_midpoint))
+  }else if(input$tile_scale){
+    return(sprintf("+\n    scale_fill_gradient(low='%s',high='%s')",
+            input$tile_fill_low,input$tile_fill_high))
+  }else{
+    return("")
+  }
+})
+
+src_tile = reactive({sprintf("ggplot(base_qual,aes(x=Pos,y=Qual)) +
+    geom_tile(aes(fill=value))%s",tile_src()
+   )})
+
+codes_tile=reactive({
+  buildCodesHtml(src_tile(), "codes_tile",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
+renderUI({HTML(codes_tile())})
+
+renderPlot({
+  p<-ggplot(base_qual,aes(x=Pos,y=Qual)) +
+    geom_tile(aes(fill=value))
+  if(input$tile_scale2){
+    p<-p + scale_fill_gradient2(low=input$tile_fill_low,high=input$tile_fill_high,midpoint=input$tile_fill_midpoint)
+  }else if(input$tile_scale){
+    p<-p + scale_fill_gradient(low=input$tile_fill_low,high=input$tile_fill_high)
+  }
+  p
+})
+```
+
+## 颜色标度
+```{r}
 ggplot(base_qual,aes(x=Pos,y=Qual)) +
     geom_tile(aes(fill=value))+
     scale_fill_gradient(low='white',high='green')
