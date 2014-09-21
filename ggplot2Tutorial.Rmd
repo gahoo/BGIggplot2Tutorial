@@ -317,12 +317,26 @@ patientdata
 ## 图形对象的数据结构
 ggplot2中的一个图形对象就是包含以下内容的列表
 
+</br>
+<div class='columns-2' style='height:340px'>
+
+</br>
+
 - 数据
 - 映射
 - 图层
 - 坐标
 - 分面
 - options（主题）
+
+</br>
+
+```{r,cache.comments=FALSE}
+library(ggplot2)
+empty<-ggplot()
+names(empty)
+```
+</div>
 
 # 图层
 ## 图层
@@ -980,60 +994,146 @@ tabsetPanel(
 ```
 </div>
 
-## 颜色标度(连续型)
+
+## 颜色标度
 ```{r, echo=FALSE}
-#Change my font size
-theme_set(theme_bw())
-inputPanel(
-  selectInput('scale_color_func', label='function:',
-              choices = c('scale_colour_gradient',
-                          'scale_colour_gradient2',
-                          'scale_fill_gradient',
-                          '<离散型>',
-                          'scale_colour_brewer'),
-              selected = 'scale_color_gradient'),
-  checkboxInput('tile_scale','scale_fill_gradient',value=FALSE),
-  textInput('tile_fill_low','low',value='white'),
-  textInput('tile_fill_high','high',value='green'),
-  checkboxInput('tile_scale2','scale_fill_gradient2',value=FALSE),
-  sliderInput('tile_fill_midpoint','midpoint',
-              min=min(base_qual$value), max=max(base_qual$value),
-              value=mean(base_qual$value))
+scale_fill_ctrl_low<-list(
+  input='textInput',
+  args=list(inputId='scale_fill_low',
+           label='low',
+           value='white'))
+scale_fill_ctrl_high<-list(
+  input='textInput',
+  args=list(inputId='scale_fill_high',
+           label='high',
+           value='green'))
+scale_fill_ctrl_mid<-list(
+  input='textInput',
+  args=list(inputId='scale_fill_mid',
+           label='mid',
+           value='white'))
+scale_fill_ctrl_midpoint<-list(
+  input='sliderInput',
+  args=list(
+    inputId='scale_fill_midpoint',
+    label='midpoint',
+    min=min(base_qual$value),
+    max=max(base_qual$value),
+    value=mean(base_qual$value)))
+scale_color_ctrl_limits<-list(
+  input='sliderInput',
+  args=list(
+    inputId='scale_fill_limits',
+    label='limits',
+    min=min(base_qual$value),
+    max=max(base_qual$value),
+    value=c(min(base_qual$value),max(base_qual$value))))
+scale_color_ctrl_breaks<-list(
+  input='sliderInput',
+  args=list(
+    inputId='scale_fill_breaks',
+    label='breaks',
+    min=min(base_qual$value),
+    max=max(base_qual$value),
+    value=c(min(base_qual$value),max(base_qual$value))))
+scale_fill_brewer_ctrl_type<-list(
+  input='selectInput',
+  args=list(
+    inputId='scale_fill_brewer_type',
+    label='type',
+    choices=c('seq','div','qual'),
+    selected='seq'))
+scale_fill_brewer_ctrl_palette<-list(
+  input='sliderInput',
+  args=list(
+    inputId='scale_brewer_palette',
+    label='palette',
+    min=1,
+    max=18,
+    value=1))
+scale_fill_func<-list(
+  scale_fill_gradient=list(
+    scale_fill_ctrl_low,
+    scale_fill_ctrl_high,
+    scale_color_ctrl_breaks,
+    scale_color_ctrl_limits
+    ),
+  scale_fill_gradient2=list(
+    scale_fill_ctrl_low,
+    scale_fill_ctrl_high,
+    scale_fill_ctrl_mid,
+    scale_fill_ctrl_midpoint
+    ),
+  scale_fill_brewer=list(
+    scale_fill_brewer_ctrl_type,
+    scale_fill_brewer_ctrl_palette
+    )
 )
 
-tile_src=reactive({
-  if(input$tile_scale2){
-    return(sprintf("+\n    scale_fill_gradient2(low='%s',high='%s',midpoint=%s)",
-            input$tile_fill_low,input$tile_fill_high,input$tile_fill_midpoint))
-  }else if(input$tile_scale){
-    return(sprintf("+\n    scale_fill_gradient(low='%s',high='%s')",
-            input$tile_fill_low,input$tile_fill_high))
-  }else{
-    return("")
+buildUI2<-function(uiList){
+  buildCtrl<-function(ctrl){
+    do.call(ctrl[['input']], ctrl[['args']])
   }
-})
+  lapply(uiList, buildCtrl)
+}
 
-src_tile = reactive({sprintf("ggplot(base_qual,aes(x=Pos,y=Qual)) +
-    geom_tile(aes(fill=value))%s",tile_src()
+getCtrlsArgs<-function(ctrls){
+  getCtrlValue<-function(ctrl){
+    input[[ctrl[['args']][['inputId']]]]
+  }
+  getCtrlLabel<-function(ctrl){
+    ctrl[['args']][['label']]
+  }
+  args<-lapply(ctrls, getCtrlValue)
+  names(args)<-lapply(ctrls, getCtrlLabel)
+  args
+}
+
+sidebarLayout(
+  sidebarPanel(
+    selectInput('scale_func_name', label='function:',
+                choices = c('scale_fill_gradient',
+                            'scale_fill_gradient2',
+                            'scale_fill_gradientn',
+                            #'<离散型>',
+                            'scale_fill_brewer'),
+                selected = 'scale_fill_gradient'),
+    selectInput('scale_color_aes_fill', label='fill',
+                choices = c('Qual', 'value'), selected='value'),
+    renderUI({buildUI2(scale_fill_func[[input$scale_func_name]])})
+  ),
+  mainPanel(
+    tabsetPanel(
+      tabPanel('Code',
+               renderUI({HTML(codes_scale_color())})
+               ),
+      tabPanel('Fig',
+               renderPlot({
+                  p<-ggplot(base_qual,aes(x=Pos,y=Qual)) +
+                    geom_tile() + aes_string(fill=input$scale_color_aes_fill)
+                  args<-getCtrlsArgs(scale_fill_func[[input$scale_func_name]])
+                  print(input$scale_func_name)
+                  scale_func<-do.call(input$scale_func_name, args)
+                  p + scale_func
+                })
+               )
+      )
+    )
+)
+
+src_scale_color = reactive({
+  args<-getCtrlsArgs(scale_fill_func[[input$scale_func_name]])
+  args<-paste(names(args), args, sep='=', collapse=', ')
+  sprintf("ggplot(base_qual,aes(x=Pos,y=Qual)) +
+    geom_tile(aes(fill=%s)) +
+    %s(%s)",input$scale_color_aes_fill,input$scale_func_name, args
    )})
 
-codes_tile=reactive({
-  buildCodesHtml(src_tile(), "codes_tile",
+codes_scale_color=reactive({
+  buildCodesHtml(src_scale_color(), "codes_scale_color",
                  opts=c("eval=F", "echo=T",
                         "background='#000000'", #useless
                         "tidy.opts=list(width.cutoff=32)"))})
-renderUI({HTML(codes_tile())})
-
-renderPlot({
-  p<-ggplot(base_qual,aes(x=Pos,y=Qual)) +
-    geom_tile(aes(fill=value))
-  if(input$tile_scale2){
-    p<-p + scale_fill_gradient2(low=input$tile_fill_low,high=input$tile_fill_high,midpoint=input$tile_fill_midpoint)
-  }else if(input$tile_scale){
-    p<-p + scale_fill_gradient(low=input$tile_fill_low,high=input$tile_fill_high)
-  }
-  p
-})
 ```
 
 ## 颜色标度
