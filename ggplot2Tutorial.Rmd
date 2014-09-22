@@ -997,6 +997,13 @@ tabsetPanel(
 
 ## 颜色标度
 ```{r, echo=FALSE}
+#gradient
+scale_fill_ctrl_name<-list(
+  input='textInput',
+  args=list(
+    inputId='scale_fill_name',
+    label='name',
+    value='value'))
 scale_fill_ctrl_low<-list(
   input='textInput',
   args=list(inputId='scale_fill_low',
@@ -1036,6 +1043,7 @@ scale_color_ctrl_breaks<-list(
     min=min(base_qual$value),
     max=max(base_qual$value),
     value=c(min(base_qual$value),max(base_qual$value))))
+#brewer
 scale_fill_brewer_ctrl_type<-list(
   input='selectInput',
   args=list(
@@ -1043,6 +1051,7 @@ scale_fill_brewer_ctrl_type<-list(
     label='type',
     choices=c('seq','div','qual'),
     selected='seq'))
+#hue
 scale_fill_brewer_ctrl_palette<-list(
   input='sliderInput',
   args=list(
@@ -1050,9 +1059,59 @@ scale_fill_brewer_ctrl_palette<-list(
     label='palette',
     min=1,
     max=18,
-    value=1))
+    value=1,
+    animate = TRUE))
+scale_fill_hue_ctrl_h<-list(
+  input='sliderInput',
+  args=list(
+    inputId='scale_fill_hue_h',
+    label='h',
+    min=0,
+    max=360,
+    step=10,
+    value=c(0,360),
+    animate = TRUE))
+scale_fill_hue_ctrl_c<-list(
+  input='sliderInput',
+  args=list(
+    inputId='scale_fill_hue_c',
+    label='c',
+    min=0,
+    max=100,
+    value=50,
+    step=5,
+    animate = TRUE))
+scale_fill_hue_ctrl_l<-list(
+  input='sliderInput',
+  args=list(
+    inputId='scale_fill_hue_l',
+    label='l',
+    min=0,
+    max=100,
+    value=50,
+    step=5,
+    animate = TRUE))
+scale_fill_hue_ctrl_hstart<-list(
+  input='sliderInput',
+  args=list(
+    inputId='scale_fill_hue_hstart',
+    label='h.start',
+    min=0,
+    max=360,
+    value=0,
+    step=10,
+    animate = TRUE))
+scale_fill_hue_ctrl_direction<-list(
+  input='selectInput',
+  args=list(
+    inputId='scale_fill_hue_direction',
+    label='direction',
+    choices = c('clockwise'=1,'counter-clockwise'=-1),
+    selected=1))
+
 scale_fill_func<-list(
   scale_fill_gradient=list(
+    scale_fill_ctrl_name,
     scale_fill_ctrl_low,
     scale_fill_ctrl_high,
     scale_color_ctrl_breaks,
@@ -1067,6 +1126,13 @@ scale_fill_func<-list(
   scale_fill_brewer=list(
     scale_fill_brewer_ctrl_type,
     scale_fill_brewer_ctrl_palette
+    ),
+  scale_fill_hue=list(
+    scale_fill_hue_ctrl_h,
+    scale_fill_hue_ctrl_c,
+    scale_fill_hue_ctrl_l,
+    scale_fill_hue_ctrl_hstart
+    #scale_fill_hue_ctrl_direction
     )
 )
 
@@ -1089,14 +1155,18 @@ getCtrlsArgs<-function(ctrls){
   args
 }
 
+null<-function(){}
+
 sidebarLayout(
   sidebarPanel(
     selectInput('scale_func_name', label='function:',
-                choices = c('scale_fill_gradient',
+                choices = c('null',
+                            'scale_fill_gradient',
                             'scale_fill_gradient2',
                             'scale_fill_gradientn',
                             #'<离散型>',
-                            'scale_fill_brewer'),
+                            'scale_fill_brewer',
+                            'scale_fill_hue'),
                 selected = 'scale_fill_gradient'),
     selectInput('scale_color_aes_fill', label='fill',
                 choices = c('Qual', 'value'), selected='value'),
@@ -1135,12 +1205,71 @@ codes_scale_color=reactive({
                         "background='#000000'", #useless
                         "tidy.opts=list(width.cutoff=32)"))})
 ```
+<aside class='note'>
+  <section>
+  - 色相(hue)
+  - 彩度(chroma)
+  - 明度(luminance)
+  
+  ![hsv/hcl](img/hcl.png)
+  https://www.nceas.ucsb.edu/~frazier/RSpatialGuides/colorPaletteCheatsheet.pdf
+  </section>
+</aside>
 
-## 颜色标度
-```{r}
-ggplot(base_qual,aes(x=Pos,y=Qual)) +
-    geom_tile(aes(fill=value))+
-    scale_fill_gradient(low='white',high='green')
+## 手动标度
+```{r, echo=FALSE}
+scale_manual_ctrl_value<-list(
+  input='textInput',
+  args=list(
+    inputId='scale_manual_value',
+    label='value',
+    value="c(A='red',G='green',C='yellow',T='blue',N='black')"
+    )
+)
+
+scale_manual_func<-list(
+  scale_colour_manual=list(
+    scale_manual_ctrl_value
+    )
+)
+
+sidebarLayout(
+  sidebarPanel(
+        selectInput('scale_manual_func_name', label='function:',
+                choices = c(#'null',
+                            'scale_colour_manual',
+                            'scale_shape_manual',
+                            ' scale_linetype_manual'),
+                selected = 'scale_colour_manual'),
+    renderUI({buildUI2(scale_manual_func[[input$scale_manual_func_name]])})
+    ),
+  mainPanel(
+    renderUI({HTML(codes_scale_manual())}),
+    renderPlot({
+      ggplot(base_comp) +
+        aes(Pos, value, colour=variable, shape=variable) +
+        geom_point() + geom_line() +
+        scale_colour_manual(
+          values = c(A='red',G='green',C='yellow',T='blue',N='black'))
+    })
+    )
+)
+
+src_scale_manual = reactive({
+  args<-getCtrlsArgs(scale_manual_func[[input$scale_manual_func_name]])
+  args<-paste(names(args), args, sep='=', collapse=', ')
+  sprintf("ggplot(base_comp) +
+  aes(Pos, value,
+      colour=variable, shape=variable)+
+  geom_point() + geom_line() +
+  %s(%s)",input$scale_manual_func_name, args
+   )})
+
+codes_scale_manual=reactive({
+  buildCodesHtml(src_scale_manual(), "codes_scale_manual",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
 ```
 
 # 坐标系
