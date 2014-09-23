@@ -859,7 +859,6 @@ $scale\left( data \right) = aesthetics\{color, size, shape\}$
   </seciton>
 </aside>
 
-
 ## 标度工作原理
 $scale\left( data \right) = aesthetics\{color, size, shape\}$
 
@@ -993,7 +992,6 @@ tabsetPanel(
 
 ```
 </div>
-
 
 ## 颜色标度
 ```{r, echo=FALSE}
@@ -1222,14 +1220,28 @@ scale_manual_ctrl_value<-list(
   input='textInput',
   args=list(
     inputId='scale_manual_value',
-    label='value',
+    label='values',
     value="c(A='red',G='green',C='yellow',T='blue',N='black')"
     )
 )
 
+scale_shape_manual_ctrl_value<-scale_manual_ctrl_value
+scale_shape_manual_ctrl_value[['args']][['inputId']]='scale_shape_manual_value'
+scale_shape_manual_ctrl_value[['args']][['value']]="c(1,2,3,4,5)"
+scale_linetype_manual_ctrl_value<-scale_manual_ctrl_value
+scale_linetype_manual_ctrl_value[['args']][['inputId']]='scale_linetype_manual_value'
+scale_linetype_manual_ctrl_value[['args']][['value']]="c(1,2,3,4,5)"
+
+
 scale_manual_func<-list(
   scale_colour_manual=list(
     scale_manual_ctrl_value
+    ),
+  scale_shape_manual=list(
+    scale_shape_manual_ctrl_value
+    ),
+  scale_linetype_manual=list(
+    scale_linetype_manual_ctrl_value
     )
 )
 
@@ -1239,28 +1251,36 @@ sidebarLayout(
                 choices = c(#'null',
                             'scale_colour_manual',
                             'scale_shape_manual',
-                            ' scale_linetype_manual'),
+                            'scale_linetype_manual'),
                 selected = 'scale_colour_manual'),
     renderUI({buildUI2(scale_manual_func[[input$scale_manual_func_name]])})
     ),
   mainPanel(
-    renderUI({HTML(codes_scale_manual())}),
-    renderPlot({
-      ggplot(base_comp) +
-        aes(Pos, value, colour=variable, shape=variable) +
-        geom_point() + geom_line() +
-        scale_colour_manual(
-          values = c(A='red',G='green',C='yellow',T='blue',N='black'))
-    })
+    tabsetPanel(
+      tabPanel('Code',
+        renderUI({HTML(codes_scale_manual())})),
+      tabPanel('Fig',
+          renderPlot({
+            args<-getCtrlsArgs(scale_manual_func[[input$scale_manual_func_name]])
+            args[['values']]<-eval(parse(text=args[['values']]))
+            ggplot(base_comp) +
+              aes(Pos, value, colour=variable, shape=variable, linetype=variable) +
+              geom_point() + geom_line() +
+              do.call(input$scale_manual_func_name, args)
+              #scale_colour_manual(
+              #  values = c(A='red',G='green',C='yellow',T='blue',N='black'))
+          })
+        )
+      )
     )
 )
 
 src_scale_manual = reactive({
   args<-getCtrlsArgs(scale_manual_func[[input$scale_manual_func_name]])
-  args<-paste(names(args), args, sep='=', collapse=', ')
+  args<-paste(names(args), args, sep=' = ', collapse=', ')
   sprintf("ggplot(base_comp) +
-  aes(Pos, value,
-      colour=variable, shape=variable)+
+  aes(Pos, value, colour=variable, 
+      shape=variable, linetype=variable)+
   geom_point() + geom_line() +
   %s(%s)",input$scale_manual_func_name, args
    )})
@@ -1272,8 +1292,56 @@ codes_scale_manual=reactive({
                         "tidy.opts=list(width.cutoff=32)"))})
 ```
 
+## 同一型标度
+```{r, fig.height=3}
+base_qual_color<-base_qual
+base_qual_color$colors<-sample(rainbow(nrow((base_qual_color))))
+base_qual_color$colors2<-sample(base_qual_color$colors)
+ggplot(base_qual_color,aes(x=Pos,y=Qual)) +
+  geom_tile(aes(fill=colors,colour=colors2)) +
+  scale_fill_identity() + 
+  scale_color_identity()
+```
+
+## 图例和坐标轴
+坐标轴和坐标被共同称为`引导元素guide`，都是标度的逆函数。
+![Axes and Lenge](img/axes_and_legend.png)
+
 # 坐标系
 # 分面
+## 分面
+切割数据生成一系列小联号图，每个小图代表不同的数据子集。分为网格型和封装型两种
+![facet](img/facet.png)
+<aside class='note'>
+  <section>
+  - 网格型facet_gird：本质上为2维
+  - 封装型facet_wrap：本质上为1维，为节省空间封装成2维
+  </section>
+</aside>
+
+## 网格分面与封装分面
+```{r}
+base_comp$halfPos<-ifelse(base_comp$Pos>50,"Pos>50","Pos<=50")
+base_comp$p25value<-ifelse(base_comp$value>25,"value>25","value<=25")
+k<-ggplot(base_comp,aes(x=Pos,y=value,colour=variable)) +
+  geom_point() +
+  #facet_grid(variable~halfPos+p25value,scales='free')
+  facet_wrap(~variable+halfPos,ncol=4,scales='free_x')
+```
+
+<aside class='note'>
+  <section>
+  - gird
+    - ~ variable
+    - variable ~ .
+    - variable~halfPos
+    - variable~halfPos+p25value
+  - wrap
+  </section>
+</aside>
+
+## 标度控制
+
 # 主题
 
 
