@@ -1320,14 +1320,142 @@ ggplot(base_qual_color,aes(x=Pos,y=Qual)) +
 </aside>
 
 ## 网格分面与封装分面
-```{r}
+```{r, echo=FALSE}
 base_comp$halfPos<-ifelse(base_comp$Pos>50,"Pos>50","Pos<=50")
 base_comp$p25value<-ifelse(base_comp$value>25,"value>25","value<=25")
-k<-ggplot(base_comp,aes(x=Pos,y=value,colour=variable)) +
+
+facet_ctrl_formula<-list(
+  input='textInput',
+  args=list(
+    inputId='facet_formula',
+    label='facets',
+    value="~ variable")
+)
+facet_ctrl_margins<-list(
+  input='checkboxInput',
+  args=list(
+    inputId='facet_margins',
+    label='margins',
+    value=FALSE)
+  )
+
+facet_ctrl_scales<-list(
+  input='selectInput',
+  args=list(
+    inputId='facet_scales',
+    label='scales',
+    choices = c('fixed', 'free_x', 'free_y', 'free'),
+    selected='fixed')
+  )
+facet_ctrl_space<-facet_ctrl_scales
+facet_ctrl_space[['args']][['inputId']]='facet_space'
+facet_ctrl_space[['args']][['label']]='space'
+facet_ctrl_labeller<-list(
+  input='selectInput',
+  args=list(
+    inputId='facet_labeller',
+    label='labeller',
+    choices = c('label_value','label_both','label_bquote','parsed'),
+    selected='label_value')
+  )
+facet_ctrl_shink<-list(
+  input='checkboxInput',
+  args=list(
+    inputId='facet_shink',
+    label='shrink',
+    value=TRUE)
+  )
+facet_ctrl_drop<-facet_ctrl_shink
+facet_ctrl_drop[['args']][['inputId']]='facet_drop'
+facet_ctrl_drop[['args']][['label']]='drop'
+facet_ctrl_astable<-facet_ctrl_shink
+facet_ctrl_astable[['args']][['inputId']]='facet_astable'
+facet_ctrl_astable[['args']][['label']]='as.table'
+#facet_wrap
+facet_ctrl_nrow<-list(
+  input='sliderInput',
+  args=list(
+    inputId='facet_nrow',
+    label='nrow',
+    min=1,
+    max=10,
+    value=3)
+  )
+facet_ctrl_ncol<-facet_ctrl_nrow
+facet_ctrl_ncol[['args']][['inputId']]<-'facet_ncol'
+facet_ctrl_ncol[['args']][['label']]<-'ncol'
+
+facet_func<-list(
+  facet_grid=list(
+    facet_ctrl_formula,
+    facet_ctrl_margins,
+    facet_ctrl_scales,
+    facet_ctrl_space,
+    facet_ctrl_labeller,
+    facet_ctrl_shink,
+    facet_ctrl_drop,
+    facet_ctrl_astable
+    ),
+  facet_wrap=list(
+    facet_ctrl_formula,
+    facet_ctrl_scales,
+    facet_ctrl_nrow,
+    facet_ctrl_ncol,
+    facet_ctrl_shink,
+    facet_ctrl_drop,
+    facet_ctrl_astable
+    )
+)
+
+sidebarLayout(
+  sidebarPanel(
+    selectInput('facet_func_name', label='function:',
+                choices = c('facet_null',
+                            'facet_grid',
+                            'facet_wrap'),
+                selected = 'facet_null'),
+    renderUI({buildUI2(facet_func[[input$facet_func_name]])})
+    ),
+  mainPanel(
+    tabsetPanel(
+      tabPanel(
+        'Code', renderUI({HTML(codes_facet())})
+        ),
+      tabPanel(
+        'Fig',
+        renderPlot({
+          if(input$facet_func_name=='facet_null'){
+            args=list()
+          }else{
+            args<-getCtrlsArgs(facet_func[[input$facet_func_name]])
+            args[['facets']]<-as.formula(args[['facets']])
+          }
+          ggplot(base_comp,aes(x=Pos,y=value,colour=variable)) +
+            geom_point() +
+            do.call(input$facet_func_name,args)
+               })
+        )
+      )
+    )
+  )
+
+src_facet = reactive({
+  args<-getCtrlsArgs(facet_func[[input$facet_func_name]])
+  args<-paste(names(args), args, sep=' = ', collapse=', ')
+  sprintf('base_comp$halfPos<-ifelse(base_comp$Pos>50,"Pos>50","Pos<=50")
+base_comp$p25value<-ifelse(base_comp$value>25,"value>25","value<=25")
+ggplot(base_comp,aes(x=Pos,y=value,colour=variable)) +
   geom_point() +
-  #facet_grid(variable~halfPos+p25value,scales='free')
-  facet_wrap(~variable+halfPos,ncol=4,scales='free_x')
+  %s(%s)',input$facet_func_name, args
+   )})
+
+codes_facet=reactive({
+  buildCodesHtml(src_facet(), "codes_facet",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
 ```
+
 
 <aside class='note'>
   <section>
