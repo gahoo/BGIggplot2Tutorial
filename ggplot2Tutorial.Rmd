@@ -1307,7 +1307,184 @@ ggplot(base_qual_color,aes(x=Pos,y=Qual)) +
 坐标轴和坐标被共同称为`引导元素guide`，都是标度的逆函数。
 ![Axes and Lenge](img/axes_and_legend.png)
 
+
 # 坐标系
+## 坐标系
+坐标系`coord`是将两种为指标度结合在一起组成的2维定位系统。
+
+Name     | Description
+---------|-------------
+cartesian|笛卡尔坐标系
+equal    |同尺度笛卡尔坐标系
+flip     |翻转的笛卡尔坐标系
+trans    |变幻的笛卡尔坐标系
+map      |地图映射
+polar    |极坐标系
+
+<aside class='note'>
+  <section>
+  - 将两个位置图形属性组合成2维方位系统。极坐标中为角度和半径。
+  - 配合分面，会出坐标轴和面板背景
+  </section>
+</aside>
+
+## 坐标系
+```{r, echo=FALSE}
+coord_ctrl_xlim<-list(
+  input='sliderInput',
+  args=list(
+    inputId='coord_xlim',
+    label='xlim',
+    min=0,
+    max=90,
+    value=c(0,90),
+    animate=TRUE)
+)
+
+coord_ctrl_ylim<-list(
+  input='sliderInput',
+  args=list(
+    inputId='coord_ylim',
+    label='ylim',
+    min=0,
+    max=60,
+    value=c(0,60),
+    animate=TRUE)
+)
+
+coord_ctrl_xtrans<-list(
+  input='selectInput',
+  args=list(
+    inputId='coord_xtrans',
+    label='x',
+    choices=c('identity',
+              'sqrt'),
+    selected='identity')
+  )
+coord_ctrl_ytrans<-coord_ctrl_xtrans
+coord_ctrl_ytrans[['args']][['label']]='y'
+coord_ctrl_ytrans[['args']][['inputId']]='coord_ytrans'
+
+coord_ctrl_ratio<-list(
+  input='sliderInput',
+  args=list(
+    inputId='coord_ratio',
+    label='ratio',
+    min=0.5,
+    max=2,
+    value=1,
+    step=0.5,
+    animate=TRUE)
+)
+
+coord_ctrl_theta<-list(
+  input='selectInput',
+  args=list(
+    inputId='coord_theta',
+    label='theta',
+    choices=c('x', 'y'),
+    selected='x')
+  )
+
+coord_ctrl_start<-list(
+  input='sliderInput',
+  args=list(
+    inputId='coord_start',
+    label='start',
+    min=0,
+    max=12,
+    value=0)
+  )
+
+coord_ctrl_direction<-list(
+  input='sliderInput',
+  args=list(
+    inputId='coord_direction',
+    label='direction',
+    min=-1,
+    max=1,
+    step=2,
+    value=1)
+  )
+
+
+
+coord_func<-list(
+  coord_cartesian=list(
+    coord_ctrl_xlim,
+    coord_ctrl_ylim
+    ),
+  coord_flip=list(
+    coord_ctrl_xlim,
+    coord_ctrl_ylim
+    ),
+  coord_equal=list(
+    coord_ctrl_ratio
+    ),
+  coord_trans=list(
+    coord_ctrl_xtrans,
+    coord_ctrl_ytrans
+    ),
+    coord_polar=list(
+    coord_ctrl_theta,
+    coord_ctrl_start,
+    coord_ctrl_direction)
+)
+
+sidebarLayout(
+  sidebarPanel(
+    selectInput('coord_dataset', label='dataset:',
+                choices = c('base_comp'),
+                selected = 'base_comp'),
+    selectInput('coord_func_name', label='function:',
+                choices = c('coord_cartesian',
+                            'coord_flip',
+                            'coord_trans',
+                            'coord_equal',
+                            'coord_polar'),
+                selected = 'coord_cartesian'),
+    renderUI({buildUI2(coord_func[[input$coord_func_name]])})
+    ),
+  mainPanel(
+    tabsetPanel(
+      tabPanel(
+        'Code', renderUI({HTML(codes_coord())})
+        ),
+      tabPanel(
+        'Fig',
+        renderPlot({
+          args<-getCtrlsArgs(coord_func[[input$coord_func_name]])
+          ggplot(base_comp,aes(x=Pos,y=value,colour=variable)) +
+            geom_point() +
+            do.call(input$coord_func_name,args)
+               })
+        )
+      )
+    )
+  )
+
+src_coord = reactive({
+  args<-getCtrlsArgs(coord_func[[input$coord_func_name]])
+  args<-paste(names(args), args, sep=' = ', collapse=', ')
+  sprintf('ggplot(base_comp,aes(x=Pos,y=value,colour=variable)) +
+  geom_point() +
+  %s(%s)',input$coord_func_name, args
+   )})
+
+codes_coord=reactive({
+  buildCodesHtml(src_coord(), "codes_coord",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
+```
+
+<aside class='note'>
+  <section>
+  - 设置范围：与标度的xlim区别是，标度将范围外数据删除，此处仅仅是缩放展示范围
+  - 变换：标度层面的变换发生在统计量计算前，且不会改变几何形状；而coord在之后，会改变集合形状
+  </section>
+</aside>
+
 # 分面
 ## 分面
 切割数据生成一系列小联号图，每个小图代表不同的数据子集。分为网格型和封装型两种
