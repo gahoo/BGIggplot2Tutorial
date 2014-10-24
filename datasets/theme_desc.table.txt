@@ -1,0 +1,51 @@
+Theme	element Type	Description
+line	element_line	all line elements
+rect	element_rect	all rectangluar elements
+text	element_text	all text elements
+title	element_text	all title elements: plot, axes, legends
+axis.title	element_text	label of axes
+axis.title.x	element_text	x axis label
+axis.title.y	element_text	y axis label
+axis.text	element_text	tick labels along axes
+axis.text.x	element_text	x axis tick labels
+axis.text.y	element_text	y axis tick labels
+axis.ticks	element_line	tick marks along axes
+axis.ticks.x	element_line	x axis tick marks
+axis.ticks.y	element_line	y axis tick marks
+axis.ticks.length	unit	length of tick marks
+axis.ticks.margin	unit	space between tick mark and tick label
+axis.line	element_line	lines along axes
+axis.line.x	element_line	line along x axis
+axis.line.y	element_line	line along y axis
+legend.background	element_rect	background of legend
+legend.margin	unit	extra space added around legend
+legend.key	element_rect	background underneath legend keys
+legend.key.size	unit	size of legend keys
+legend.key.height	unit	key background height
+legend.key.width	unit	key background width
+legend.text	element_text	legend item labels
+legend.text.align		alignment of legend labels(number from 0 left to 1 right)
+legend.title	element_text	title of legend
+legend.title.align		alignment of legend title
+legend.position		the position of legends.(left, "right", "bottom", "top", or two-element numeric vector)
+legend.direction		layout of items in legends(horizontal or "vertical")
+legend.justification		anchor point for positioning legend inside plot(center or two-element numeric vector)
+legend.box		arrangement of multiple legends(horizontal or "vertical")
+legend.box.just		justification of each legend within the overall bounding box, when there are multiple legends(unit with the sizes of the top, right, bottom, and left margins)
+panel.background	element_rect	background of plotting area, drawn underneath plot
+panel.border	element_rect	border around plotting area, drawn on top of plot so that it covers tick marks and grid lines. This should be used with fill=NA
+panel.margin	unit	margin around facet panels
+panel.grid	element_line	grid lines
+panel.grid.major	element_line	major grid lines
+panel.grid.minor	element_line	minor grid lines
+panel.grid.major.x	element_line	vertical major grid lines
+panel.grid.major.y	element_line	horizontal major grid lines
+panel.grid.minor.x	element_line	vertical minor grid lines
+panel.grid.minor.y	element_line	horizontal minor grid lines
+plot.background	element_rect	background of the entire plot
+plot.title	element_text	plot title
+plot.margin		margin around entire plot(unit with the sizes of the top, right, bottom, and left margins)
+strip.background	element_rect	background of facet labels
+strip.text	element_text	facet labels
+strip.text.x	element_text	facet labels along horizontal direction
+strip.text.y	element_text	facet labels along vertical direction

@@ -1307,7 +1307,6 @@ ggplot(base_qual_color,aes(x=Pos,y=Qual)) +
 坐标轴和坐标被共同称为`引导元素guide`，都是标度的逆函数。
 ![Axes and Lenge](img/axes_and_legend.png)
 
-
 # 坐标系
 ## 坐标系
 坐标系`coord`是将两种为指标度结合在一起组成的2维定位系统。
@@ -1407,8 +1406,6 @@ coord_ctrl_direction<-list(
     value=1)
   )
 
-
-
 coord_func<-list(
   coord_cartesian=list(
     coord_ctrl_xlim,
@@ -1425,25 +1422,62 @@ coord_func<-list(
     coord_ctrl_xtrans,
     coord_ctrl_ytrans
     ),
-    coord_polar=list(
+  coord_polar=list(
     coord_ctrl_theta,
     coord_ctrl_start,
-    coord_ctrl_direction)
+    coord_ctrl_direction
+    )
 )
+
+
+coord_bar_ctrl_position<-list(
+  input='selectInput',
+  args=list(
+    inputId='coord_bar_position',
+    label='position',
+    choices = c('dodge','fill','identity','jitter','stack'),
+    selected='dodge')
+  )
+
+coord_bar_ctrl_stat<-list(
+  input='selectInput',
+  args=list(
+    inputId='coord_bar_stat',
+    label='stat',
+    choices = c('identity'),
+    selected='identity')
+  )
+
+coord_geom_func<-list(
+  geom_bar=list(
+    coord_bar_ctrl_position,
+    coord_bar_ctrl_stat
+    )
+  )
+
 
 sidebarLayout(
   sidebarPanel(
-    selectInput('coord_dataset', label='dataset:',
-                choices = c('base_comp'),
-                selected = 'base_comp'),
-    selectInput('coord_func_name', label='function:',
+    sliderInput('coord_subset', label='Pos <=',
+                min=1, max=90, value=10, animate=TRUE),
+    selectInput('coord_func_name', label='coord:',
                 choices = c('coord_cartesian',
                             'coord_flip',
                             'coord_trans',
                             'coord_equal',
                             'coord_polar'),
                 selected = 'coord_cartesian'),
-    renderUI({buildUI2(coord_func[[input$coord_func_name]])})
+    renderUI({buildUI2(coord_func[[input$coord_func_name]])}),
+    selectInput('coord_geom_func_name', label='geom:',
+                choices = c('geom_bar',
+                            'geom_point',
+                            'geom_line'),
+                selected='geom_bar'),
+    renderUI({buildUI2(coord_geom_func[[input$coord_geom_func_name]])}),
+    selectInput('coord_x',label='x',
+                choices=c('Pos','factor(1)'),
+                selected='Pos'),
+    style="height:450px;overflow: scroll;"
     ),
   mainPanel(
     tabsetPanel(
@@ -1453,9 +1487,12 @@ sidebarLayout(
       tabPanel(
         'Fig',
         renderPlot({
+          base_comp_sub <- subset(base_comp,Pos <= input$coord_subset)
           args<-getCtrlsArgs(coord_func[[input$coord_func_name]])
-          ggplot(base_comp,aes(x=Pos,y=value,colour=variable)) +
-            geom_point() +
+          geom_args<-getCtrlsArgs(coord_geom_func[[input$coord_geom_func_name]])
+          ggplot(base_comp_sub,aes(x=Pos,y=value,colour=variable,fill=variable)) +
+            do.call(input$coord_geom_func_name,geom_args)+
+            aes_string(x=input$coord_x)+
             do.call(input$coord_func_name,args)
                })
         )
@@ -1464,11 +1501,17 @@ sidebarLayout(
   )
 
 src_coord = reactive({
+  delim<-",\n\t\t"
   args<-getCtrlsArgs(coord_func[[input$coord_func_name]])
-  args<-paste(names(args), args, sep=' = ', collapse=', ')
-  sprintf('ggplot(base_comp,aes(x=Pos,y=value,colour=variable)) +
-  geom_point() +
-  %s(%s)',input$coord_func_name, args
+  args<-paste(names(args), args, sep=' = ', collapse=delim)
+  geom_args<-getCtrlsArgs(coord_geom_func[[input$coord_geom_func_name]])
+  geom_args<-paste(names(geom_args), geom_args, sep=' = ', collapse=delim)
+  sprintf('ggplot(base_comp)+
+  aes(x=%s,y=value,colour=variable)) +
+  %s(%s) +
+  %s(%s)', input$coord_x,
+  input$coord_func_name, args,
+  input$coord_geom_func_name, geom_args
    )})
 
 codes_coord=reactive({
@@ -1482,6 +1525,11 @@ codes_coord=reactive({
   <section>
   - 设置范围：与标度的xlim区别是，标度将范围外数据删除，此处仅仅是缩放展示范围
   - 变换：标度层面的变换发生在统计量计算前，且不会改变几何形状；而coord在之后，会改变集合形状
+  - 极坐标：常用于时间和方向数据
+  - 饼图：不建议用，因为人对长度比对角度敏感。x=factor, position=stack, theta=y
+  - 风向玫瑰图：第一位护士提灯女神南丁格尔首创。x=Pos, position=stack, theta=x
+  - 雷达图：极坐标中的直线是弯的……所以ggplot画出来的雷达图也是弯的
+  - 牛眼图：x=factor, position=dodge, theta=y
   </section>
 </aside>
 
@@ -1647,8 +1695,46 @@ codes_facet=reactive({
 
 ## 标度控制
 
-# 主题
 
+# 主题
+## 主题
+- 内置主题
+    - theme_grey() 
+    - theme_bw()
+    - theme_set()
+    - theme_get()
+- 主题元素
+- 主题函数
+    - 文本`element_text`
+    - 线条`element_lines`
+    - 矩形`element_rectangles`
+    - 空白`element_blank`
+
+## 主题元素
+主题由控制图形外观的多个元素组成。
+<div style="height:500px;overflow: scroll;"
+```{r, echo=FALSE}
+stat_df<-read.delim('datasets/theme_desc.table.txt',
+                         sep='\t',as.is=TRUE,header=TRUE)
+renderDataTable(stat_df, 
+                options = list(bPaginate = FALSE,
+                               bFilter = FALSE))
+```
+</div>
+
+## 元素函数
+控制元素外观的函数被称为元素函数。
+- 文本`element_text`
+     - 绘制标签和标题
+     - family, face, colour, size, hjust, vjust, angle, lineheight
+- 线条`element_lines`
+    - 绘制线条或线段
+    - colour, size, linetype
+- 矩形`element_rectangles`
+    - 绘制主要供背景使用的矩形
+    - fill, colour, size, linetype
+- 空白`element_blank`
+    - 表示空主题，不分配相应的绘图空间
 
 ## geom
 The `geom` objects render the layers. Controlling the plot types. Every `geom` has it's own _Aesthetics_, which modifies how the `geom` looks like.
