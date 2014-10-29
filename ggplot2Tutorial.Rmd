@@ -1744,13 +1744,14 @@ names(elements)<-stat_df$Theme
 getThemeArgsText<-function(argList){
   args<-lapply(names(argList), function(element){
     arg<-argList[[element]]
-    arg<-unlist(arg[!sapply(arg,is.null)])
-    arg<-arg[grep('NULL',arg,invert=TRUE)]
-    #message(arg)
+    element_func<-class(arg)[1]
+    #arg<-unlist(arg[!sapply(arg,is.null)])
+    arg<-arg[grep('NULL|^0$',arg,invert=TRUE)]
+    message(str(arg))
     sprintf("%s=%s(%s)",
             element,
-            elements[element],
-            paste(names(arg),arg, sep=' = ', collapse = ', ')
+            element_func,
+            paste(names(arg), unlist(arg), sep=' = ', collapse = ', ')
             )
   })
   args<-paste(unlist(args), sep=' = ', collapse=',\n        ')
@@ -1908,17 +1909,17 @@ sidebarLayout(
       tabPanel(
         'Fig',
         renderPlot({
-          args<-getThemeArgs(themeValues$args)
-          #args<-getCtrlsArgs(theme_func[[input$theme_element_func]])
-          #no_null_idx<-grep('NULL',unlist(args),invert = T)
-          #args<-args[no_null_idx]
-          #themeArgs=list()
-          #themeArgs[[input$theme_element]]<-do.call(input$theme_element_func, args)
+          #args<-getThemeArgs(themeValues$args)
+#           args<-getCtrlsArgs(theme_func[[input$theme_element_func]])
+#           no_null_idx<-grep('NULL',unlist(args),invert = T)
+#           args<-args[no_null_idx]
+#           themeArgs=list()
+#           themeArgs[[input$theme_element]]<-do.call(input$theme_element_func, args)
           #print(str(themeArgs))
           ggplot(base_comp,aes(x=Pos,y=value,colour=variable)) +
             geom_point() +
             ggtitle("The Base\nComposition") +
-            do.call('theme', args)
+            do.call('theme', themeValues$args)
                })
         )
       )
@@ -1928,12 +1929,12 @@ sidebarLayout(
 getThemeArgs<-function(argList){
   args<-lapply(names(argList), function(element){
     arg<-argList[[element]]
-    arg<-unlist(arg[!sapply(arg,is.null)])
-    arg<-arg[grep('NULL',arg,invert=TRUE)]
+    arg<-arg[grep('NULL|^0$',unlist(arg),invert=TRUE)]
     #message(arg)
-    arg<-as.list(arg)
+    #element_blank
     do.call(elements[element], arg)
   })
+  names(args)<-names(argList)
   args
 }
 
@@ -1943,6 +1944,7 @@ addArgs<-observe({
       func_name<-isolate(input$theme_element_func)
       element_name<-isolate(input$theme_element)
       args<-getCtrlsArgs(theme_func[[func_name]])
+      args<-args[grep('NULL|^0$',unlist(args),invert=TRUE)]
       themeValues$args[[element_name]]<-do.call(func_name, args)
       isolate(themeValues$add_counts<-themeValues$add_counts+1)
       #message(length(themeValues$args))
@@ -1977,7 +1979,8 @@ clearArgs<-observe({
 
 src_theme = reactive({
   args<-getThemeArgsText(themeValues$args)
-  sprintf('ggplot(base_comp,aes(x=Pos,y=value,colour=variable)) +
+  sprintf('ggplot(base_comp) +
+  aes(x=Pos,y=value,colour=variable) +
   geom_point() +
   theme(%s)',args)
   })
