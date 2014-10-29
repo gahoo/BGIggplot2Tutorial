@@ -1690,11 +1690,10 @@ codes_facet=reactive({
     - variable~halfPos
     - variable~halfPos+p25value
   - wrap
+  
+  - scale:free 标度控制
   </section>
 </aside>
-
-## 标度控制
-
 
 # 主题
 ## 主题
@@ -1724,10 +1723,11 @@ renderDataTable(stat_df,
 
 ## 元素函数
 控制元素外观的函数被称为元素函数。
+
 - 文本`element_text`
      - 绘制标签和标题
      - family, face, colour, size, hjust, vjust, angle, lineheight
-- 线条`element_lines`
+- 线条`element_line`
     - 绘制线条或线段
     - colour, size, linetype
 - 矩形`element_rectangles`
@@ -1735,6 +1735,265 @@ renderDataTable(stat_df,
     - fill, colour, size, linetype
 - 空白`element_blank`
     - 表示空主题，不分配相应的绘图空间
+
+## 主题元素与函数
+```{r,echo=FALSE}
+elements<-stat_df$element.Type
+names(elements)<-stat_df$Theme
+
+getThemeArgsText<-function(argList){
+  args<-lapply(names(argList), function(element){
+    arg<-argList[[element]]
+    arg<-unlist(arg[!sapply(arg,is.null)])
+    arg<-arg[grep('NULL',arg,invert=TRUE)]
+    #message(arg)
+    sprintf("%s=%s(%s)",
+            element,
+            elements[element],
+            paste(names(arg),arg, sep=' = ', collapse = ', ')
+            )
+  })
+  args<-paste(unlist(args), sep=' = ', collapse=',\n        ')
+  args
+}
+
+element_ctrl_family<-list(
+  input='selectInput',
+  args=list(
+    inputId='element_family',
+    label='family',
+    choices=c('NULL','Garamond','Arial','Comic Sans MS', names(pdfFonts())[1:11]),
+    selected='Arial')
+  )
+element_ctrl_face<-list(
+  input='selectInput',
+  args=list(
+    inputId='element_face',
+    label='face',
+  choices=c('NULL',"plain", "italic", "bold", "bold.italic"),
+  selected='plain')
+  )
+element_ctrl_colour<-list(
+  input='textInput',
+  args=list(
+    inputId='element_colour',
+    label='colour',
+    value='NULL')
+  )
+element_ctrl_fill<-element_ctrl_colour
+element_ctrl_fill[['args']][['inputId']]<-'element_fill'
+element_ctrl_fill[['args']][['label']]<-'fill'
+
+element_ctrl_size<-list(
+  input='sliderInput',
+  args=list(
+    inputId='element_size',
+    label='size',
+    min=0,
+    max=30,
+    value=15)
+  )
+element_ctrl_hjust<-list(
+  input='sliderInput',
+  args=list(
+    inputId='element_hjust',
+    label='hjust',
+    min=0,
+    max=1,
+    value=0.5)
+  )
+element_ctrl_vjust<-list(
+  input='sliderInput',
+  args=list(
+    inputId='element_vjust',
+    label='vjust',
+    min=0,
+    max=1,
+    value=0.5)
+  )
+element_ctrl_angle<-list(
+  input='sliderInput',
+  args=list(
+    inputId='element_angle',
+    label='angle',
+    min=0,
+    max=360,
+    value=1)
+  )
+element_ctrl_lineheight<-list(
+  input='sliderInput',
+  args=list(
+    inputId='element_lineheight',
+    label='lineheight',
+    min=0,
+    max=4,
+    value=1.2)
+  )
+element_ctrl_linetype<-list(
+  input='sliderInput',
+  args=list(
+    inputId='element_linetype',
+    label='linetype',
+    min=0,
+    max=12,
+    value=1)
+  )
+element_ctrl_lineend<-list(
+  input='selectInput',
+  args=list(
+    inputId='element_lineend',
+    label='lineend',
+    choices=c('round','butt','square'),
+    selected='butt')
+  )
+
+theme_func<-list(
+  element_text=list(
+    element_ctrl_family,
+    element_ctrl_face,
+    element_ctrl_colour,
+    element_ctrl_size,
+    element_ctrl_hjust,
+    element_ctrl_vjust,
+    element_ctrl_angle,
+    element_ctrl_lineheight
+    ),
+  element_line=list(
+    element_ctrl_colour,
+    element_ctrl_size,
+    element_ctrl_linetype,
+    element_ctrl_lineend
+    ),
+  element_rect=list(
+    element_ctrl_fill,
+    element_ctrl_colour,
+    element_ctrl_size,
+    element_ctrl_linetype
+    ),
+  element_blank=list()
+)
+
+element_func<-reactive({elements[input$theme_element]})
+themeValues<-reactiveValues()
+themeValues$args<-list()
+themeValues$add_counts=0
+themeValues$del_counts=0
+themeValues$clear_counts=0
+
+
+sidebarLayout(
+  sidebarPanel(
+    selectInput('theme_element', label='element:',
+                choices = names(elements),
+                selected = 'axis.title'),
+    renderUI({
+      element_func<-elements[input$theme_element]
+      names(element_func)<-NULL
+      selectInput('theme_element_func', label='function:',
+                choices = c(element_func, 'element_blank'),
+                selected = element_func)
+    }),
+    hr(),
+    renderUI({buildUI2(theme_func[[input$theme_element_func]])}),
+    actionButton('add_theme_args', 'Add'),
+    actionButton('del_theme_args', 'Remove'),
+    actionButton('clear_theme_args', 'Clear'),
+    style="height:480px;width:220px;overflow: scroll;"
+    ),
+  mainPanel(
+    tabsetPanel(
+      tabPanel(
+        'Code', renderUI({HTML(codes_theme())})
+        ),
+      tabPanel(
+        'Fig',
+        renderPlot({
+          args<-getThemeArgs(themeValues$args)
+          #args<-getCtrlsArgs(theme_func[[input$theme_element_func]])
+          #no_null_idx<-grep('NULL',unlist(args),invert = T)
+          #args<-args[no_null_idx]
+          #themeArgs=list()
+          #themeArgs[[input$theme_element]]<-do.call(input$theme_element_func, args)
+          #print(str(themeArgs))
+          ggplot(base_comp,aes(x=Pos,y=value,colour=variable)) +
+            geom_point() +
+            ggtitle("The Base\nComposition") +
+            do.call('theme', args)
+               })
+        )
+      )
+    )
+  )
+
+getThemeArgs<-function(argList){
+  args<-lapply(names(argList), function(element){
+    arg<-argList[[element]]
+    arg<-unlist(arg[!sapply(arg,is.null)])
+    arg<-arg[grep('NULL',arg,invert=TRUE)]
+    #message(arg)
+    arg<-as.list(arg)
+    do.call(elements[element], arg)
+  })
+  args
+}
+
+addArgs<-observe({
+  if(length(input$add_theme_args) != 0 ){
+    if(input$add_theme_args > 0 & input$add_theme_args > themeValues$add_counts){
+      func_name<-isolate(input$theme_element_func)
+      element_name<-isolate(input$theme_element)
+      args<-getCtrlsArgs(theme_func[[func_name]])
+      themeValues$args[[element_name]]<-do.call(func_name, args)
+      isolate(themeValues$add_counts<-themeValues$add_counts+1)
+      #message(length(themeValues$args))
+      message(paste("add",input$add_theme_args,themeValues$add_counts))
+    }
+  }
+})
+
+delArgs<-observe({
+  element_name<-isolate(input$theme_element)
+  if(length(input$del_theme_args) != 0){
+    if(input$del_theme_args > 0 & 
+         input$del_theme_args > themeValues$del_counts & 
+         !is.null(themeValues$args[[element_name]])){
+      themeValues$args[[element_name]]<-NULL
+      isolate(themeValues$del_counts<-themeValues$del_counts+1)
+      message(paste("del",input$del_theme_args,themeValues$del_counts))
+   }
+ }
+})
+
+clearArgs<-observe({
+  if(length(input$clear_theme_args) != 0){
+    if(input$clear_theme_args > 0 & 
+         input$clear_theme_args > themeValues$clear_counts){
+      themeValues$args<-list()
+      isolate(themeValues$clear_counts<-themeValues$clear_counts+1)
+      message(paste("clear",input$clear_theme_args,themeValues$clear_counts))
+   }
+ }
+})
+
+src_theme = reactive({
+  args<-getThemeArgsText(themeValues$args)
+  sprintf('ggplot(base_comp,aes(x=Pos,y=value,colour=variable)) +
+  geom_point() +
+  theme(%s)',args)
+  })
+
+codes_theme=reactive({
+  buildCodesHtml(src_theme(), "codes_theme",
+                 opts=c("eval=F", "echo=T",
+                        "background='#000000'", #useless
+                        "tidy.opts=list(width.cutoff=32)"))})
+```
+
+
+<aside class='note'>
+  <section>
+  </section>
+</aside>
 
 ## geom
 The `geom` objects render the layers. Controlling the plot types. Every `geom` has it's own _Aesthetics_, which modifies how the `geom` looks like.
@@ -2165,3 +2424,5 @@ renderPlot({
 - Human eyes is more sensitive to length, not angle.
 
 # Thankyou|Questions?
+## Reference
+http://sape.inf.usi.ch/quick-reference/ggplot2/
