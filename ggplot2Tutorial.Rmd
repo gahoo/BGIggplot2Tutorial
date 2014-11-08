@@ -2035,3 +2035,65 @@ http://sape.inf.usi.ch/quick-reference/ggplot2/
 http://blog.fens.me/tag/r/
 
 # Thankyou|Questions?
+<div id="comment-area">
+```{r,echo=FALSE}
+commentValues<-reactiveValues()
+commentValues$comment<-""
+commentValues$message<-"欢迎吐槽"
+commentValues$submit_counts<-0
+commentValues$load_counts<-0
+
+tags$textarea(id='contact',rows=1, cols=180,'', placeholder='联系方式（QQ, email）')
+br()
+renderUI({
+tags$textarea(id="comments", rows=15, cols=180,
+              commentValues$comment, placeholder=commentValues$message)
+})
+actionButton('submit_comment', '吐槽')
+
+submitComment<-observe({
+  if(length(input$submit_comment) != 0){
+    if(input$submit_comment > 0 &
+       input$submit_comment > commentValues$submit_counts){
+      isolate(commentValues$submit_counts<-commentValues$submit_counts+1)
+      if(input$comments != ""){
+        message(paste("submit",input$submit_comment,input$comments))
+        comment<-paste(Sys.time(),input$contact,input$comments,'------',sep='\n')
+        write(comment,file="datasets/comments.txt",append=TRUE)
+        isolate(commentValues$comment<-input$comments)
+        isolate(commentValues$comment<-"")
+        isolate(commentValues$message<-"成功提交，可继续吐槽")
+      }
+   }
+ }
+})
+
+loadComment<-observe({
+  if(length(input$load_comment) != 0){
+    if(input$load_comment > 0 &
+       input$load_comment > commentValues$load_counts){
+      isolate(commentValues$load_counts<-commentValues$load_counts+1)
+      message(paste("load",input$load_comment,input$comments))
+      comment<-paste(scan('datasets/comments.txt',what='character'),collapse='\n')
+      isolate(commentValues$comment<-comment)
+   }
+ }
+})
+```
+</div>
+<style>
+#comment-area
+  {
+  position:absolute;
+  left:550px;
+  top:150px;
+  }
+</style>
+
+<aside class='note'>
+  <section>
+```{r,echo=FALSE}
+actionButton('load_comment', '看吐槽')
+```
+  </section>
+</aside>
